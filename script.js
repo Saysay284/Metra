@@ -41,9 +41,12 @@ theme.addEventListener("click", () => {
 });
 
 // ─── Weather Code → Emoji Icon ───────────────────────────────────────────────
-function weatherIcon(code) {
-    if (code === 0) return "☀️";
-    if (code >= 1 && code <= 3) return "⛅";
+function weatherIcon(code, forceNight = false) {
+    const hour = new Date().getHours();
+    const isNight = forceNight || hour < 6 || hour >= 19;
+
+    if (code === 0) return isNight ? "🌙" : "☀️";
+    if (code >= 1 && code <= 3) return isNight ? "☁️" : "⛅";
     if (code >= 45 && code <= 48) return "🌫️";
     if (code >= 51 && code <= 55) return "🌦️";
     if (code >= 61 && code <= 65) return "🌧️";
@@ -114,7 +117,7 @@ async function fetchWeatherByCity(citySearched) {
             return;
         }
 
-        const { latitude, longitude, name, country } = geoData.results[0];
+        const { latitude, longitude, name, country, timezone } = geoData.results[0];
 
         // Step 2: Fetch weather
         // FIX: Added &forecast_days=7 — Open-Meteo requires this for a reliable daily array
@@ -145,8 +148,10 @@ async function fetchWeatherByCity(citySearched) {
         document.getElementById('TempC').innerText = tempC;
         document.getElementById('humidity').innerText = weatherData.current.relative_humidity_2m;
         document.getElementById('windSpeed').innerText = weatherData.current.wind_speed_10m;
-        document.getElementById('time').innerText = new Date().toLocaleTimeString([], {
-            hour: '2-digit', minute: '2-digit'
+        document.getElementById('time').innerText = new Date().toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: timezone  // e.g. "America/New_York"
         });
 
         // ── Advanced Modules ──
@@ -201,6 +206,19 @@ async function fetchWeatherByCity(citySearched) {
             wklyTemp.length,
             weatherData.daily.temperature_2m_max.length
         );
+        // ── Dynamic Day Labels ──
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const todayIndex = new Date().getDay();
+        const allWeeklyCards = document.querySelectorAll('.weeklyData');
+
+        allWeeklyCards.forEach((card, i) => {
+            const dayLabel = card.querySelector('p:first-child');
+            if (i === 0) {
+                dayLabel.innerText = 'Today';
+            } else {
+                dayLabel.innerText = dayNames[(todayIndex + i) % 7];
+            }
+        });
         for (let i = 0; i < dayCount; i++) {
             wklyTemp[i].innerText = Math.round(weatherData.daily.temperature_2m_max[i]);
             wklyHumidity[i].innerText = `${weatherData.daily.relative_humidity_2m_max[i]}%`;

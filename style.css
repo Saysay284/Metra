@@ -52,17 +52,47 @@ main {
     padding: 18px 0 32px;
 }
 
-/*style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; margin: 15px 0;"*/
+/* ========================================================
+   1. DEFAULT / DARK THEME STYLE (Transparent Glass Look)
+   ======================================================== */
+[data-theme="dark"] #aiAssistantContainer,
 #aiAssistantContainer {
     background: rgba(255, 255, 255, 0.05);
     padding: 15px;
     border-radius: 8px;
     margin: 15px 0;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: none;
+    /* No shadow in dark theme to keep it flat */
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-#aiSummary {
-    color: var(--muted);
+/* ========================================================
+   2. LIGHT THEME OVERRIDE (Solid White & Floaty Shadow)
+   ======================================================== */
+[data-theme="light"] #aiAssistantContainer {
+    background: #ffffff;
+    /* Solid white so shadow is visible */
+    padding: 20px;
+    /* Slightly more padding for the floating look */
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+
+    /* Layered floaty light shadow */
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08),
+        0 8px 16px -6px rgba(0, 0, 0, 0.04);
 }
+
+/* Optional: Fun interaction to make it look even more floaty when hovered */
+#aiAssistantContainer:hover {
+    transform: translateY(-3px);
+}
+
+[data-theme="light"] #aiAssistantContainer:hover {
+    box-shadow: 0 18px 30px -5px rgba(0, 0, 0, 0.12),
+        0 10px 20px -6px rgba(0, 0, 0, 0.06);
+}
+
 
 #navBar {
     position: sticky;
