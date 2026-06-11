@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <html lang="en" data-theme="dark">
+    <script src="script.js" defer></script>
+    <title>Metra</title>
+</head>
+
+<body>
+    <main>
+        <!--Navigation Bar-->
+        <div id="navBar">
+            <div id="logoHolder"></div>
+            <div id="nameHolder"></div>
+            <div id="navLinks">
+                <a href="#content">Home</a>
+                <a href="#weatherStats">Weather</a>
+                <a href="#savedLoactions">Saved Locations</a>
+                <a href="#Map_Radar">Map & Radar</a>
+                <!--Change Language-->
+                <select id="languageSelect">
+                    <option value="en">English</option>
+                    <option value="es">Spanish</option>
+                    <option value="fr">French</option>
+                    <option value="de">German</option>
+                    <option value="zh">Chinese</option>
+                    <option value="ja">Japanese</option>
+                    <option value="ru">Russian</option>
+                    <option value="ar">Arabic</option>
+                    <option value="hi">Hindi</option>
+                    <option value="pt">Portuguese</option>
+                    <option value="it">Italian</option>
+                    <option value="ko">Korean</option>
+                </select>
+            </div><!--End of Navigation Links Div-->
+            <button id="themeToggle">Toggle Theme</button>
+        </div>
+
+        <!--Content-->
+        <div id="content">
+            <h1>Welcome to Metra</h1>
+            <h3>Your weather buddy.</h3>
+            <p>With Metra, you can check the weather and get real-time updates on your commute.</p>
+
+            <!--Search Bar-->
+            <div id="searchBar">
+                <input type="text" placeholder="Enter a location" id="locationInput">
+            </div>
+
+            <!--Current Location Status-->
+            <div id="currentLocStats">
+                <p>Current Location: <span id="location"></span></p>
+                <p>Time: <span id="time"></span></p>
+                <button id="saveLoc">Save Location</button>
+            </div>
+
+            <!--Weather Status-->
+            <div id="weatherStats">
+                <div id="weatherIcon"></div>
+                <p>Temperature in °F : <span id="TempF"></span>°F</p>
+                <p>Temperature in °C : <span id="TempC"></span>°C</p>
+                <p>Condition: <span id="condition"></span></p>
+                <p>Humidity: <span id="humidity"></span>%</p>
+                <p>Wind Speed: <span id="windSpeed"></span> mph</p>
+
+                <!--Hourly Forecast-->
+                <div id="hourlyForecast">
+                    <p>Hourly Forecast for the next 24 hrs</p>
+
+                    <!--Now-->
+                    <div class="hourlyData" id="now">
+                        <p>Now</p>
+                        <div class="hourlyWeatherIcon"></div>
+                        <p><span class="hourlyTempF"></span>°F</p>
+                        <p><span class="hourlyHumidity"></span></p>
+                    </div>
+
+                    <!--10 PM-->
+                    <div class="hourlyData" id="10pm">
+                        <p>10 PM</p>
+                        <div class="hourlyWeatherIcon"></div>
+                        <p><span class="hourlyTempF"></span>°F</p>
+                        <p><span class="hourlyHumidity"></span></p>
+                    </div>
+
+                    <!--11 PM-->
+                    <div class="hourlyData" id="11pm">
+                        <p>11 PM</p>
+                        <div class="hourlyWeatherIcon"></div>
+                        <p><span class="hourlyTempF"></span>°F</p>
+                        <p><span class="hourlyHumidity"></span></p>
+                    </div>
+
+                    <!--Midnight-->
+                    <div class="hourlyData" id="midnight">
+                        <p>Midnight</p>
+                        <div class="hourlyWeatherIcon"></div>
+                        <p><span class="hourlyTempF"></span>°F</p>
+                        <p><span class="hourlyHumidity"></span></p>
+                    </div>
+
+                    <!--1 AM-->
+                    <div class="hourlyData" id="1am">
+                        <p>01 AM</p>
+                        <div class="hourlyWeatherIcon"></div>
+                        <p><span class="hourlyTempF"></span>°F</p>
+                        <p><span class="hourlyHumidity"></span></p>
+                    </div>
+
+                    <!--2 AM-->
+                    <div class="hourlyData" id="2am">
+                        <p>02 AM</p>
+                        <div class="hourlyWeatherIcon"></div>
+                        <p><span class="hourlyTempF"></span>°F</p>
+                        <p><span class="hourlyHumidity"></span></p>
+                    </div>
+
+                    <!--3 AM-->
+                    <div class="hourlyData" id="3am">
+                        <p>03 AM</p>
+                        <div class="hourlyWeatherIcon"></div>
+                        <p><span class="hourlyTempF"></span>°F</p>
+                        <p><span class="hourlyHumidity"></span></p>
+                    </div>
+                </div> <!--End of Hourly Forecast Div-->
+
+                <!--Weekly Forecast-->
+                <div id="weeklyForecast">
+                    <p>Weekly Forecast</p>
+
+                    <!--Today-->
+                    <div class="weeklyData" id="today">
+                        <p>Today</p>
+                        <p><span class="weeklyCondition"></span></p>
+                        <div class="weeklyWeatherIcon"></div>
+                        <p><span class="weeklyTempF"></span>°F</p>
+                        <p><span class="weeklyHumidity"></span></p>
+                    </div>
+
+                    <!--Monday-->
+                    <div class="weeklyData" id="monday">
+                        <p>Monday</p>
+                        <p><span class="weeklyCondition"></span></p>
+                        <div class="weeklyWeatherIcon"></div>
+                        <p><span class="weeklyTempF"></span>°F</p>
+                        <p><span class="weeklyHumidity"></span></p>
+                    </div>
+
+                    <!--Tuesday-->
+                    <div class="weeklyData" id="tuesday">
+                        <p>Tuesday</p>
+                        <p><span class="weeklyCondition"></span></p>
+                        <div class="weeklyWeatherIcon"></div>
+                        <p><span class="weeklyTempF"></span>°F</p>
+                        <p><span class="weeklyHumidity"></span></p>
+                    </div>
+
+                    <!--Wednesday-->
+                    <div class="weeklyData" id="wednesday">
+                        <p>Wednesday</p>
+                        <p><span class="weeklyCondition"></span></p>
+                        <div class="weeklyWeatherIcon"></div>
+                        <p><span class="weeklyTempF"></span>°F</p>
+                        <p><span class="weeklyHumidity"></span></p>
+                    </div>
+
+                    <!--Thursday-->
+                    <div class="weeklyData" id="thursday">
+                        <p>Thursday</p>
+                        <p><span class="weeklyCondition"></span></p>
+                        <div class="weeklyWeatherIcon"></div>
+                        <p><span class="weeklyTempF"></span>°F</p>
+                        <p><span class="weeklyHumidity"></span></p>
+                    </div>
+
+                    <!--Friday-->
+                    <div class="weeklyData" id="friday">
+                        <p>Friday</p>
+                        <p><span class="weeklyCondition"></span></p>
+                        <div class="weeklyWeatherIcon"></div>
+                        <p><span class="weeklyTempF"></span>°F</p>
+                        <p><span class="weeklyHumidity"></span></p>
+                    </div>
+
+                    <!--Saturday-->
+                    <div class="weeklyData" id="saturday">
+                        <p>Saturday</p>
+                        <p><span class="weeklyCondition"></span></p>
+                        <div class="weeklyWeatherIcon"></div>
+                        <p><span class="weeklyTempF"></span>°F</p>
+                        <p><span class="weeklyHumidity"></span></p>
+                    </div>
+
+                    <!--Sunday-->
+                    <div class="weeklyData" id="sunday">
+                        <p>Sunday</p>
+                        <p><span class="weeklyCondition"></span></p>
+                        <div class="weeklyWeatherIcon"></div>
+                        <p><span class="weeklyTempF"></span>°F</p>
+                        <p><span class="weeklyHumidity"></span></p>
+                    </div>
+
+                </div><!--End of Weekly Forecast Div-->
+
+                <div id="Map_Radar">
+                    <h5>Map and Radar</h5>
+                    <div id="map"></div>
+                    <div id="radar"></div>
+                    <!--Weather details-->
+                    <div id="weatherDetails">
+                        <p>Sunrise: <span id="sunrise"></span></p>
+                        <p>Sunset: <span id="sunset"></span></p>
+                        <p>UV Index: <span id="uvIndex"></span></p>
+                        <p>Air Quality: <span id="airQuality"></span></p>
+                        <p>Visibility: <span id="visibility"></span> miles</p>
+                        <p>Pressure: <span id="pressure"></span> mb</p>
+                    </div>
+                </div><!--End of Map and Radar Div-->
+            </div> <!--End of Weather Stats Div-->
+
+            <!--Saved Locations-->
+            <div id="savedLoactions">
+                <h4>My Saved Locations</h4>
+                <ul id="savedLocationsList">
+                    <!--Saved locations will be dynamically added here-->
+                </ul>
+                <!--weather details of saved locations-->
+                <div id="savedLocationDetails">
+                    <p>Location: <span id="savedLocation"></span></p>
+                    <p>Temperature in °F : <span id="savedTempF"></span>°F</p>
+                    <p>Temperature in °C : <span id="savedTempC"></span>°C</p>
+                    <p>Condition: <span id="savedCondition"></span></p>
+                    <p>Humidity: <span id="savedHumidity"></span>%</p>
+                    <p>Wind Speed: <span id="savedWindSpeed"></span> mph</p>
+                </div>
+            </div><!--End of Saved Locations Div-->
+
+        </div><!--End of Content Div-->
+
+        <footer>
+            <p> About us </p>
+            <p> Privacy Policy </p>
+            <p> Terms of Service </p>
+            <p> Contact Support </p>
+            <p>&copy; 2026 Metra. All rights reserved.</p>
+        </footer>
+    </main>
+
+</body>
+
+</html>
