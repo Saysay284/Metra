@@ -41,10 +41,8 @@ theme.addEventListener("click", () => {
 });
 
 // ─── Weather Code → Emoji Icon ───────────────────────────────────────────────
-function weatherIcon(code, forceNight = false) {
-    const hour = new Date().getHours();
-    const isNight = forceNight || hour < 6 || hour >= 19;
-
+function weatherIcon(code, localHour = new Date().getHours()) {
+    const isNight = localHour < 6 || localHour >= 19;
     if (code === 0) return isNight ? "🌙" : "☀️";
     if (code >= 1 && code <= 3) return isNight ? "☁️" : "⛅";
     if (code >= 45 && code <= 48) return "🌫️";
@@ -87,7 +85,7 @@ async function fetchMetraAIBriefing() {
         const response = await fetch('http://localhost:3000/api/ai-briefing', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ city, tempC, tempF: document.getElementById('TempF').innerText, condition, humidity, language: selectedLanguage })
+            body: JSON.stringify({ city, tempC, tempF: document.getElementById('TempF').innerText, condition, humidity, language: selectedLanguage, timezone: window.currentTimezone || 'UTC' })
         });
         const data = await response.json();
         aiSummaryElement.innerText = data.summary ?? data.error ?? "Unable to load briefing.";
@@ -119,6 +117,9 @@ async function fetchWeatherByCity(citySearched) {
 
         const { latitude, longitude, name, country, timezone } = geoData.results[0];
 
+        // Store timezone globally after geocoding so AI can access it
+        window.currentTimezone = timezone;
+
         // Step 2: Fetch weather
         // FIX: Added &forecast_days=7 — Open-Meteo requires this for a reliable daily array
         const weatherUrl = `https://api.open-meteo.com/v1/forecast` +
@@ -133,13 +134,19 @@ async function fetchWeatherByCity(citySearched) {
         if (!weatherResponse.ok) throw new Error(`Weather HTTP ${weatherResponse.status}`);
         const weatherData = await weatherResponse.json();
 
+
         // ── Current Conditions ──
         document.getElementById('location').innerText = `${name}, ${country}`;
         const conditionText = interpretWeatherCode(weatherData.current.weather_code);
         document.getElementById('condition').innerText = conditionText;
 
+        // Calculate localHour FIRST before using it
+        const localHour = parseInt(new Date().toLocaleString('en-US', {
+            hour: 'numeric', hour12: false, timeZone: timezone
+        }));
+
         if (currentWeatherIcon) {
-            currentWeatherIcon.innerText = weatherIcon(weatherData.current.weather_code);
+            currentWeatherIcon.innerText = weatherIcon(weatherData.current.weather_code, localHour);
         }
 
         const tempF = Math.round(weatherData.current.temperature_2m);
@@ -196,7 +203,7 @@ async function fetchWeatherByCity(citySearched) {
             hrlyTemp[i].innerText = Math.round(weatherData.hourly.temperature_2m[i]);
             hrlyHumidity[i].innerText = `${weatherData.hourly.relative_humidity_2m[i]}%`;
             if (hrlyWeatherIcon[i]) {
-                hrlyWeatherIcon[i].innerText = weatherIcon(weatherData.hourly.weather_code[i]);
+                hrlyWeatherIcon[i].innerText = weatherIcon(weatherData.hourly.weather_code[i], (localHour + i) % 24);
             }
         }
 
@@ -224,7 +231,7 @@ async function fetchWeatherByCity(citySearched) {
             wklyHumidity[i].innerText = `${weatherData.daily.relative_humidity_2m_max[i]}%`;
             wklyWeatherCondition[i].innerText = interpretWeatherCode(weatherData.daily.weather_code[i]);
             if (wklyWeatherIcon[i]) {
-                wklyWeatherIcon[i].innerText = weatherIcon(weatherData.daily.weather_code[i]);
+                wklyWeatherIcon[i].innerText = weatherIcon(weatherData.daily.weather_code[i], 12);
             }
         }
 
