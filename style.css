@@ -52,37 +52,49 @@ main {
     padding: 18px 0 32px;
 }
 
+/*style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; margin: 15px 0;"*/
+#aiAssistantContainer {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 15px;
+    border-radius: 8px;
+    margin: 15px 0;
+}
+
+#aiSummary {
+    color: var(--muted);
+}
+
 #navBar {
-  position: sticky;
-  top: 12px;
-  z-index: 1000;
+    position: sticky;
+    top: 12px;
+    z-index: 1000;
 
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
 
-  padding: 16px 18px;
-  margin-bottom: 18px;
+    padding: 16px 18px;
+    margin-bottom: 18px;
 
-  background: rgba(244, 247, 250, 0.55);
-  border: 1px solid rgba(28, 37, 65, 0.10);
-  border-radius: 18px;
+    background: rgba(244, 247, 250, 0.55);
+    border: 1px solid rgba(28, 37, 65, 0.10);
+    border-radius: 18px;
 
-  box-shadow: 0 10px 28px rgba(11, 19, 43, 0.10);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 10px 28px rgba(11, 19, 43, 0.10);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
 }
 
 html[data-theme="dark"] #navBar {
-  background: rgba(11, 19, 43, 0.55);
-  border: 1px solid rgba(244, 247, 250, 0.10);
+    background: rgba(11, 19, 43, 0.55);
+    border: 1px solid rgba(244, 247, 250, 0.10);
 }
 
 /* make it a bit darker in dark theme */
 html[data-theme="dark"] #navBar {
-  background: rgba(11, 19, 43, 0.8);
+    background: rgba(11, 19, 43, 0.8);
 }
 
 #logoHolder,
@@ -257,6 +269,10 @@ button:not(#themeToggle):hover {
     border-radius: 22px;
     background: linear-gradient(135deg, rgba(0, 119, 182, 0.14), rgba(255, 183, 3, 0.12));
     border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
 }
 
 /* Forecast wrappers */
@@ -316,12 +332,17 @@ button:not(#themeToggle):hover {
     font-size: 0.92rem;
 }
 
-.hourlyWeatherIcon {
+.hourlyWeatherIcon,
+.weeklyWeatherIcon {
     width: 40px;
     height: 40px;
     margin: 8px auto;
     border-radius: 12px;
     background: linear-gradient(135deg, rgba(74, 144, 226, 0.18), rgba(255, 183, 3, 0.12));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
 }
 
 /* Weekly forecast grid */
@@ -355,6 +376,10 @@ button:not(#themeToggle):hover {
     margin: 8px auto;
     border-radius: 12px;
     background: linear-gradient(135deg, rgba(74, 144, 226, 0.18), rgba(255, 183, 3, 0.12));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
 }
 
 /* Map and details */
