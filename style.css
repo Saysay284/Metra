@@ -94,6 +94,21 @@ main {
 }
 
 
+#logoHolder img {
+    width: 140px;
+    height: auto;
+    object-fit: contain;
+    transition: filter 0.3s ease;
+}
+
+html[data-theme="light"] #logoHolder img {
+    filter: brightness(0.95) contrast(1);
+}
+
+html[data-theme="dark"] #logoHolder img {
+    filter: brightness(1.2) contrast(1.1);
+}
+
 #navBar {
     position: sticky;
     top: 12px;
@@ -102,10 +117,10 @@ main {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
+    gap: 6px;
     flex-wrap: wrap;
 
-    padding: 16px 18px;
+    padding: 8px 10px;
     margin-bottom: 18px;
 
     background: rgba(244, 247, 250, 0.55);
