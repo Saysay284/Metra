@@ -113,8 +113,6 @@ The backend runs on `http://localhost:3000` and proxies all weather and AI reque
 ---
 
 ## Screenshots
-
-<img width="1366" height="768" alt="Screenshot 2026-06-13 164936" src="https://github.com/user-attachments/assets/b7cbd797-4d39-4364-9d44-2cbf72cbc302" />
 <img width="1281" height="489" alt="Screenshot 2026-06-13 171118" src="https://github.com/user-attachments/assets/c64c6e79-3a15-4e5c-bc17-aa8c26642adc" />
 <img width="1278" height="481" alt="Screenshot 2026-06-13 171104" src="https://github.com/user-attachments/assets/5ddaf65a-cb49-4fcc-8c7a-689d71f3eb5f" />
 <img width="1230" height="480" alt="Screenshot 2026-06-13 171048" src="https://github.com/user-attachments/assets/21fd7ae7-245d-4a97-830f-bea5d7a083b0" />
