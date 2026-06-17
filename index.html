@@ -5,25 +5,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style.css">
-    <html lang="en" data-theme="dark">
     <script src="script.js" defer></script>
-    <title>Metra</title>
+    <title>Metra - Modern Weather App</title>
 </head>
 
 <body>
-    <main>
-        <!--Navigation Bar-->
-        <div id="navBar">
-            <div id="logoHolder">
-                <img src="metra-logo.png" alt="Metra Logo">
+    <!-- Landing Page -->
+    <div id="landingPage" class="landing-page active">
+        <div class="landing-content">
+            <div class="landing-header">
+                <h1 class="landing-title">Metra</h1>
+                <p class="landing-subtitle">Your Modern Weather Companion</p>
             </div>
+            <div class="landing-actions">
+                <button id="useMyLocation" class="landing-btn btn-primary">📍 Use My Current Location</button>
+                <button id="searchManually" class="landing-btn btn-secondary">🔍 Search a Location</button>
+            </div>
+        </div>
+    </div>
+
+    <main id="mainApp" style="display: none;">
+        <div id="navBar">
+            <div id="logoHolder"><span class="logo-text">M</span></div>
             <div id="nameHolder"></div>
             <div id="navLinks">
                 <a href="#content">Home</a>
                 <a href="#weatherStats">Weather</a>
-                <a href="#savedLoactions">Saved Locations</a>
-                <a href="#Map_Radar">Map & Radar</a>
-                <!--Change Language-->
+                <a href="#savedLoactions">Saved</a>
                 <select id="languageSelect">
                     <option value="en">English</option>
                     <option value="es">Spanish</option>
@@ -38,240 +46,205 @@
                     <option value="it">Italian</option>
                     <option value="ko">Korean</option>
                 </select>
-            </div><!--End of Navigation Links Div-->
-            <button id="themeToggle">Toggle Theme</button>
+            </div>
+            <button id="themeToggle" title="Toggle Theme">🌙</button>
         </div>
 
-        <!--Content-->
         <div id="content">
-            <h1>Welcome to Metra</h1>
-            <h3>Your weather buddy.</h3>
-            <p>With Metra, you can check the weather and get real-time updates on your commute.</p>
-
-            <!--Search Bar-->
-            <div id="searchBar">
-                <input type="text" placeholder="Enter a location" id="locationInput">
+            <div class="hero-section">
+                <h1>Check Your Weather</h1>
+                <h3>Real-time forecasts at your fingertips</h3>
             </div>
 
-            <!--Current Location Status-->
-            <div id="currentLocStats">
-                <p>Current Location: <span id="location"></span></p>
-                <p>Time: <span id="time"></span></p>
-                <button id="saveLoc">Save Location</button>
+            <div class="search-section">
+                <div id="searchBar">
+                    <input type="text" placeholder="🔍 Search for a city..." id="locationInput">
+                    <button id="useLocationBtn" title="Use current location" class="location-btn">📍</button>
+                </div>
             </div>
 
+            <div id="currentLocStats" class="stats-card">
+                <div class="stat-item">
+                    <div class="stat-label">Location</div>
+                    <div class="stat-value" id="location">-</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Time</div>
+                    <div class="stat-value" id="time">-</div>
+                </div>
+                <button id="saveLoc" class="save-btn">💾 Save Location</button>
+            </div>
 
-            <!--Metra AI Assistant-->
-            <div id="aiAssistantContainer">
-                <h4 style="display: flex; align-items: center; gap: 8px; margin: 0 0 10px 0;">
-                    <!-- Tiny inline AI Robot SVG -->
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 8V4H8" />
-                        <rect width="16" height="12" x="4" y="8" rx="2" />
-                        <path d="M2 14h2" />
-                        <path d="M20 14h2" />
-                        <path d="M15 13v2" />
-                        <path d="M9 13v2" />
-                    </svg>
-                    Metra AI Buddy
-                </h4>
+            <div id="aiAssistantContainer" class="ai-card">
+                <h4>🤖 Metra AI Buddy</h4>
                 <p id="aiSummary">Loading AI weather briefing...</p>
             </div>
 
-            <!--Weather Status-->
-            <div id="weatherStats">
-                <div id="weatherIcon"></div>
-                <p>Temperature in °F : <span id="TempF"></span>°F</p>
-                <p>Temperature in °C : <span id="TempC"></span>°C</p>
-                <p>Condition: <span id="condition"></span></p>
-                <p>Humidity: <span id="humidity"></span>%</p>
-                <p>Wind Speed: <span id="windSpeed"></span> mph</p>
-
-                <!--Hourly Forecast-->
-                <div id="hourlyForecast">
-                    <p>Hourly Forecast for the next 24 hrs</p>
-
-                    <!--Now-->
-                    <div class="hourlyData" id="now">
-                        <p>Now</p>
-                        <div class="hourlyWeatherIcon"></div>
-                        <p><span class="hourlyTempF"></span>°F</p>
-                        <p><span class="hourlyHumidity"></span></p>
+            <div id="weatherStats" class="weather-card">
+                <div class="weather-main">
+                    <div id="weatherIcon" class="weather-icon-container"></div>
+                    <div class="weather-info">
+                        <div class="temp-display">
+                            <span id="TempF" class="temp-value">-</span>
+                            <span class="temp-unit">°F</span>
+                        </div>
+                        <p><span id="condition">-</span></p>
+                        <p class="temp-celsius"><span id="TempC">-</span>°C</p>
                     </div>
+                </div>
 
-                    <!--10 PM-->
-                    <div class="hourlyData" id="10pm">
-                        <p>10 PM</p>
-                        <div class="hourlyWeatherIcon"></div>
-                        <p><span class="hourlyTempF"></span>°F</p>
-                        <p><span class="hourlyHumidity"></span></p>
+                <div class="weather-details-grid">
+                    <div class="detail-item">
+                        <span class="detail-label">Humidity</span>
+                        <span class="detail-value" id="humidity">-</span>%
                     </div>
-
-                    <!--11 PM-->
-                    <div class="hourlyData" id="11pm">
-                        <p>11 PM</p>
-                        <div class="hourlyWeatherIcon"></div>
-                        <p><span class="hourlyTempF"></span>°F</p>
-                        <p><span class="hourlyHumidity"></span></p>
+                    <div class="detail-item">
+                        <span class="detail-label">Wind Speed</span>
+                        <span class="detail-value" id="windSpeed">-</span> mph
                     </div>
+                </div>
 
-                    <!--Midnight-->
-                    <div class="hourlyData" id="midnight">
-                        <p>Midnight</p>
-                        <div class="hourlyWeatherIcon"></div>
-                        <p><span class="hourlyTempF"></span>°F</p>
-                        <p><span class="hourlyHumidity"></span></p>
+                <div id="hourlyForecast" class="forecast-section">
+                    <h3>Hourly Forecast</h3>
+                    <div class="forecast-grid">
+                        <div class="hourlyData" id="now">
+                            <p class="forecast-time">Now</p>
+                            <div class="hourlyWeatherIcon"></div>
+                            <p><span class="hourlyTempF"></span>°F</p>
+                            <p class="humidity-small"><span class="hourlyHumidity"></span></p>
+                        </div>
+                        <div class="hourlyData" id="10pm">
+                            <p class="forecast-time">+2h</p>
+                            <div class="hourlyWeatherIcon"></div>
+                            <p><span class="hourlyTempF"></span>°F</p>
+                            <p class="humidity-small"><span class="hourlyHumidity"></span></p>
+                        </div>
+                        <div class="hourlyData" id="11pm">
+                            <p class="forecast-time">+4h</p>
+                            <div class="hourlyWeatherIcon"></div>
+                            <p><span class="hourlyTempF"></span>°F</p>
+                            <p class="humidity-small"><span class="hourlyHumidity"></span></p>
+                        </div>
+                        <div class="hourlyData" id="midnight">
+                            <p class="forecast-time">+6h</p>
+                            <div class="hourlyWeatherIcon"></div>
+                            <p><span class="hourlyTempF"></span>°F</p>
+                            <p class="humidity-small"><span class="hourlyHumidity"></span></p>
+                        </div>
+                        <div class="hourlyData" id="1am">
+                            <p class="forecast-time">+8h</p>
+                            <div class="hourlyWeatherIcon"></div>
+                            <p><span class="hourlyTempF"></span>°F</p>
+                            <p class="humidity-small"><span class="hourlyHumidity"></span></p>
+                        </div>
+                        <div class="hourlyData" id="2am">
+                            <p class="forecast-time">+10h</p>
+                            <div class="hourlyWeatherIcon"></div>
+                            <p><span class="hourlyTempF"></span>°F</p>
+                            <p class="humidity-small"><span class="hourlyHumidity"></span></p>
+                        </div>
+                        <div class="hourlyData" id="3am">
+                            <p class="forecast-time">+12h</p>
+                            <div class="hourlyWeatherIcon"></div>
+                            <p><span class="hourlyTempF"></span>°F</p>
+                            <p class="humidity-small"><span class="hourlyHumidity"></span></p>
+                        </div>
                     </div>
+                </div>
 
-                    <!--1 AM-->
-                    <div class="hourlyData" id="1am">
-                        <p>01 AM</p>
-                        <div class="hourlyWeatherIcon"></div>
-                        <p><span class="hourlyTempF"></span>°F</p>
-                        <p><span class="hourlyHumidity"></span></p>
+                <div id="weeklyForecast" class="forecast-section">
+                    <h3>7-Day Forecast</h3>
+                    <div class="forecast-grid">
+                        <div class="weeklyData" id="today">
+                            <p class="day-name">Today</p>
+                            <div class="weeklyWeatherIcon"></div>
+                            <p><span class="weeklyCondition"></span></p>
+                            <p><span class="weeklyTempF"></span>°F</p>
+                            <p class="humidity-small"><span class="weeklyHumidity"></span></p>
+                        </div>
+                        <div class="weeklyData" id="monday">
+                            <p class="day-name">Monday</p>
+                            <div class="weeklyWeatherIcon"></div>
+                            <p><span class="weeklyCondition"></span></p>
+                            <p><span class="weeklyTempF"></span>°F</p>
+                            <p class="humidity-small"><span class="weeklyHumidity"></span></p>
+                        </div>
+                        <div class="weeklyData" id="tuesday">
+                            <p class="day-name">Tuesday</p>
+                            <div class="weeklyWeatherIcon"></div>
+                            <p><span class="weeklyCondition"></span></p>
+                            <p><span class="weeklyTempF"></span>°F</p>
+                            <p class="humidity-small"><span class="weeklyHumidity"></span></p>
+                        </div>
                     </div>
-
-                    <!--2 AM-->
-                    <div class="hourlyData" id="2am">
-                        <p>02 AM</p>
-                        <div class="hourlyWeatherIcon"></div>
-                        <p><span class="hourlyTempF"></span>°F</p>
-                        <p><span class="hourlyHumidity"></span></p>
-                    </div>
-
-                    <!--3 AM-->
-                    <div class="hourlyData" id="3am">
-                        <p>03 AM</p>
-                        <div class="hourlyWeatherIcon"></div>
-                        <p><span class="hourlyTempF"></span>°F</p>
-                        <p><span class="hourlyHumidity"></span></p>
-                    </div>
-                </div> <!--End of Hourly Forecast Div-->
-
-                <!--Weekly Forecast-->
-                <div id="weeklyForecast">
-                    <p>Weekly Forecast</p>
-
-                    <!--Today-->
-                    <div class="weeklyData" id="today">
-                        <p>Today</p>
-                        <p><span class="weeklyCondition"></span></p>
-                        <div class="weeklyWeatherIcon"></div>
-                        <p><span class="weeklyTempF"></span>°F</p>
-                        <p><span class="weeklyHumidity"></span></p>
-                    </div>
-
-                    <!--Monday-->
-                    <div class="weeklyData" id="monday">
-                        <p>Monday</p>
-                        <p><span class="weeklyCondition"></span></p>
-                        <div class="weeklyWeatherIcon"></div>
-                        <p><span class="weeklyTempF"></span>°F</p>
-                        <p><span class="weeklyHumidity"></span></p>
-                    </div>
-
-                    <!--Tuesday-->
-                    <div class="weeklyData" id="tuesday">
-                        <p>Tuesday</p>
-                        <p><span class="weeklyCondition"></span></p>
-                        <div class="weeklyWeatherIcon"></div>
-                        <p><span class="weeklyTempF"></span>°F</p>
-                        <p><span class="weeklyHumidity"></span></p>
-                    </div>
-
-                    <!--Wednesday-->
-                    <!-- <div class="weeklyData" id="wednesday">
-                        <p>Wednesday</p>
-                        <p><span class="weeklyCondition"></span></p>
-                        <div class="weeklyWeatherIcon"></div>
-                        <p><span class="weeklyTempF"></span>°F</p>
-                        <p><span class="weeklyHumidity"></span></p>
-                    </div>
-
-                    
-                    <div class="weeklyData" id="thursday">
-                        <p>Thursday</p>
-                        <p><span class="weeklyCondition"></span></p>
-                        <div class="weeklyWeatherIcon"></div>
-                        <p><span class="weeklyTempF"></span>°F</p>
-                        <p><span class="weeklyHumidity"></span></p>
-                    </div>
-
-                    
-                    <div class="weeklyData" id="friday">
-                        <p>Friday</p>
-                        <p><span class="weeklyCondition"></span></p>
-                        <div class="weeklyWeatherIcon"></div>
-                        <p><span class="weeklyTempF"></span>°F</p>
-                        <p><span class="weeklyHumidity"></span></p>
-                    </div>
-
-                    
-                    <div class="weeklyData" id="saturday">
-                        <p>Saturday</p>
-                        <p><span class="weeklyCondition"></span></p>
-                        <div class="weeklyWeatherIcon"></div>
-                        <p><span class="weeklyTempF"></span>°F</p>
-                        <p><span class="weeklyHumidity"></span></p>
-                    </div>
-
-                    
-                    <div class="weeklyData" id="sunday">
-                        <p>Sunday</p>
-                        <p><span class="weeklyCondition"></span></p>
-                        <div class="weeklyWeatherIcon"></div>
-                        <p><span class="weeklyTempF"></span>°F</p>
-                        <p><span class="weeklyHumidity"></span></p>
-                    </div>
-                     -->
-
-                </div><!--End of Weekly Forecast Div-->
+                </div>
 
                 <div id="Map_Radar">
-                    <h5>Map and Radar</h5>
-                    <div id="map"></div>
-                    <div id="radar"></div>
-                    <!--Weather details-->
-                    <div id="weatherDetails">
-                        <p>Sunrise: <span id="sunrise"></span></p>
-                        <p>Sunset: <span id="sunset"></span></p>
-                        <p>UV Index: <span id="uvIndex"></span></p>
-                        <p>Air Quality: <span id="airQuality"></span></p>
-                        <p>Visibility: <span id="visibility"></span> miles</p>
-                        <p>Pressure: <span id="pressure"></span> mb</p>
+                    <h3>Map & Radar</h3>
+                    <div class="map-grid">
+                        <div id="map" class="map-container">🗺️ Map</div>
+                        <div id="radar" class="radar-container">📡 Radar</div>
                     </div>
-                </div><!--End of Map and Radar Div-->
-            </div> <!--End of Weather Stats Div-->
-
-            <!--Saved Locations-->
-            <div id="savedLoactions">
-                <h4>My Saved Locations</h4>
-                <ul id="savedLocationsList">
-                    <!--Saved locations will be dynamically added here-->
-                </ul>
-                <!--weather details of saved locations-->
-                <div id="savedLocationDetails">
-                    <p>Location: <span id="savedLocation"></span></p>
-                    <p>Temperature in °F : <span id="savedTempF"></span>°F</p>
-                    <p>Temperature in °C : <span id="savedTempC"></span>°C</p>
-                    <p>Condition: <span id="savedCondition"></span></p>
-                    <p>Humidity: <span id="savedHumidity"></span>%</p>
-                    <p>Wind Speed: <span id="savedWindSpeed"></span> mph</p>
+                    <div id="weatherDetails" class="details-grid">
+                        <div class="detail-box">
+                            <p class="detail-label">Sunrise</p>
+                            <p class="detail-value" id="sunrise">-</p>
+                        </div>
+                        <div class="detail-box">
+                            <p class="detail-label">Sunset</p>
+                            <p class="detail-value" id="sunset">-</p>
+                        </div>
+                        <div class="detail-box">
+                            <p class="detail-label">UV Index</p>
+                            <p class="detail-value" id="uvIndex">-</p>
+                        </div>
+                        <div class="detail-box">
+                            <p class="detail-label">Air Quality</p>
+                            <p class="detail-value" id="airQuality">-</p>
+                        </div>
+                        <div class="detail-box">
+                            <p class="detail-label">Visibility</p>
+                            <p class="detail-value"><span id="visibility">-</span> mi</p>
+                        </div>
+                        <div class="detail-box">
+                            <p class="detail-label">Pressure</p>
+                            <p class="detail-value"><span id="pressure">-</span> mb</p>
+                        </div>
+                    </div>
                 </div>
-            </div><!--End of Saved Locations Div-->
+            </div>
 
-        </div><!--End of Content Div-->
+            <div id="savedLoactions" class="saved-section">
+                <h3>My Saved Locations</h3>
+                <ul id="savedLocationsList" class="saved-list"></ul>
+                <div id="savedLocationDetails" class="saved-details">
+                    <div class="saved-header">
+                        <h4>Location: <span id="savedLocation">-</span></h4>
+                    </div>
+                    <div class="saved-stats">
+                        <div class="saved-stat"><span class="saved-label">Temp (°F)</span><span class="saved-value"
+                                id="savedTempF">-</span></div>
+                        <div class="saved-stat"><span class="saved-label">Temp (°C)</span><span class="saved-value"
+                                id="savedTempC">-</span></div>
+                        <div class="saved-stat"><span class="saved-label">Condition</span><span class="saved-value"
+                                id="savedCondition">-</span></div>
+                        <div class="saved-stat"><span class="saved-label">Humidity</span><span class="saved-value"
+                                id="savedHumidity">-</span>%</div>
+                        <div class="saved-stat"><span class="saved-label">Wind Speed</span><span class="saved-value"
+                                id="savedWindSpeed">-</span> mph</div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <footer>
-            <p> About us </p>
-            <p> Privacy Policy </p>
-            <p> Terms of Service </p>
-            <p> Contact Support </p>
+            <p>About us</p>
+            <p>Privacy Policy</p>
+            <p>Terms of Service</p>
+            <p>Contact Support</p>
             <p>&copy; 2026 Metra. All rights reserved.</p>
         </footer>
     </main>
-
 </body>
 
 </html>
