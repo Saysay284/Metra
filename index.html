@@ -4,6 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <script src="script.js" defer></script>
     <title>Metra - Modern Weather App</title>
@@ -18,8 +22,22 @@
                 <p class="landing-subtitle">Your Modern Weather Companion</p>
             </div>
             <div class="landing-actions">
-                <button id="useMyLocation" class="landing-btn btn-primary">📍 Use My Current Location</button>
-                <button id="searchManually" class="landing-btn btn-secondary">🔍 Search a Location</button>
+                <button id="useMyLocation" class="landing-btn btn-primary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 1 1 18 0z" />
+                        <circle cx="12" cy="10" r="3" />
+                    </svg>
+                    Use My Current Location
+                </button>
+                <button id="searchManually" class="landing-btn btn-secondary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8" />
+                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                    Search a Location
+                </button>
             </div>
         </div>
     </div>
@@ -32,22 +50,29 @@
                 <a href="#content">Home</a>
                 <a href="#weatherStats">Weather</a>
                 <a href="#savedLoactions">Saved</a>
-                <select id="languageSelect">
-                    <option value="en">English</option>
-                    <option value="es">Spanish</option>
-                    <option value="fr">French</option>
-                    <option value="de">German</option>
-                    <option value="zh">Chinese</option>
-                    <option value="ja">Japanese</option>
-                    <option value="ru">Russian</option>
-                    <option value="ar">Arabic</option>
-                    <option value="hi">Hindi</option>
-                    <option value="pt">Portuguese</option>
-                    <option value="it">Italian</option>
-                    <option value="ko">Korean</option>
-                </select>
+                <div class="lang-wrapper">
+                    <select id="languageSelect">
+                        <option value="en">English</option>
+                        <option value="es">Spanish</option>
+                        <option value="fr">French</option>
+                        <option value="de">German</option>
+                        <option value="zh">Chinese</option>
+                        <option value="ja">Japanese</option>
+                        <option value="ru">Russian</option>
+                        <option value="ar">Arabic</option>
+                        <option value="hi">Hindi</option>
+                        <option value="pt">Portuguese</option>
+                        <option value="it">Italian</option>
+                        <option value="ko">Korean</option>
+                    </select>
+                </div>
             </div>
-            <button id="themeToggle" title="Toggle Theme">🌙</button>
+            <button id="themeToggle" title="Toggle Theme">
+                <svg id="themeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                </svg>
+            </button>
         </div>
 
         <div id="content">
@@ -58,8 +83,14 @@
 
             <div class="search-section">
                 <div id="searchBar">
-                    <input type="text" placeholder="🔍 Search for a city..." id="locationInput">
-                    <button id="useLocationBtn" title="Use current location" class="location-btn">📍</button>
+                    <input type="text" placeholder="Search for a city..." id="locationInput">
+                    <button id="useLocationBtn" title="Use current location" class="location-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 1 1 18 0z" />
+                            <circle cx="12" cy="10" r="3" />
+                        </svg>
+                    </button>
                 </div>
             </div>
 
@@ -72,11 +103,30 @@
                     <div class="stat-label">Time</div>
                     <div class="stat-value" id="time">-</div>
                 </div>
-                <button id="saveLoc" class="save-btn">💾 Save Location</button>
+                <button id="saveLoc" class="save-btn">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                        <polyline points="17 21 17 13 7 13 7 21" />
+                        <polyline points="7 3 7 8 15 8" />
+                    </svg>
+                    Save Location
+                </button>
             </div>
 
             <div id="aiAssistantContainer" class="ai-card">
-                <h4>🤖 Metra AI Buddy</h4>
+                <h4>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 8V4H8" />
+                        <rect width="16" height="12" x="4" y="8" rx="2" />
+                        <path d="M2 14h2" />
+                        <path d="M20 14h2" />
+                        <path d="M15 13v2" />
+                        <path d="M9 13v2" />
+                    </svg>
+                    Metra AI Buddy
+                </h4>
                 <p id="aiSummary">Loading AI weather briefing...</p>
             </div>
 
@@ -95,12 +145,25 @@
 
                 <div class="weather-details-grid">
                     <div class="detail-item">
-                        <span class="detail-label">Humidity</span>
-                        <span class="detail-value" id="humidity">-</span>%
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+                        </svg>
+                        <div>
+                            <span class="detail-label">Humidity</span>
+                            <span class="detail-value" id="humidity">-</span>%
+                        </div>
                     </div>
                     <div class="detail-item">
-                        <span class="detail-label">Wind Speed</span>
-                        <span class="detail-value" id="windSpeed">-</span> mph
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <path
+                                d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2" />
+                        </svg>
+                        <div>
+                            <span class="detail-label">Wind Speed</span>
+                            <span class="detail-value" id="windSpeed">-</span> mph
+                        </div>
                     </div>
                 </div>
 
@@ -182,31 +245,78 @@
                 <div id="Map_Radar">
                     <h3>Map & Radar</h3>
                     <div class="map-grid">
-                        <div id="map" class="map-container">🗺️ Map</div>
-                        <div id="radar" class="radar-container">📡 Radar</div>
+                        <div id="map" class="map-container">Loading map…</div>
+                        <div id="radar" class="radar-container">Loading radar…</div>
                     </div>
                     <div id="weatherDetails" class="details-grid">
                         <div class="detail-box">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M17 18a5 5 0 0 0-10 0" />
+                                <line x1="12" y1="2" x2="12" y2="9" />
+                                <line x1="4.22" y1="10.22" x2="5.64" y2="11.64" />
+                                <line x1="1" y1="18" x2="3" y2="18" />
+                                <line x1="21" y1="18" x2="23" y2="18" />
+                                <line x1="18.36" y1="11.64" x2="19.78" y2="10.22" />
+                                <line x1="1" y1="22" x2="23" y2="22" />
+                                <polyline points="8 6 12 2 16 6" />
+                            </svg>
                             <p class="detail-label">Sunrise</p>
                             <p class="detail-value" id="sunrise">-</p>
                         </div>
                         <div class="detail-box">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M17 18a5 5 0 0 0-10 0" />
+                                <line x1="12" y1="9" x2="12" y2="2" />
+                                <line x1="4.22" y1="10.22" x2="5.64" y2="11.64" />
+                                <line x1="1" y1="18" x2="3" y2="18" />
+                                <line x1="21" y1="18" x2="23" y2="18" />
+                                <line x1="18.36" y1="11.64" x2="19.78" y2="10.22" />
+                                <line x1="1" y1="22" x2="23" y2="22" />
+                                <polyline points="16 5 12 9 8 5" />
+                            </svg>
                             <p class="detail-label">Sunset</p>
                             <p class="detail-value" id="sunset">-</p>
                         </div>
                         <div class="detail-box">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="5" />
+                                <line x1="12" y1="1" x2="12" y2="3" />
+                                <line x1="12" y1="21" x2="12" y2="23" />
+                                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                                <line x1="1" y1="12" x2="3" y2="12" />
+                                <line x1="21" y1="12" x2="23" y2="12" />
+                            </svg>
                             <p class="detail-label">UV Index</p>
                             <p class="detail-value" id="uvIndex">-</p>
                         </div>
                         <div class="detail-box">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9 12l2 2 4-4" />
+                                <circle cx="12" cy="12" r="10" />
+                            </svg>
                             <p class="detail-label">Air Quality</p>
                             <p class="detail-value" id="airQuality">-</p>
                         </div>
                         <div class="detail-box">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
                             <p class="detail-label">Visibility</p>
                             <p class="detail-value"><span id="visibility">-</span> mi</p>
                         </div>
                         <div class="detail-box">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 2v6m0 4v10M5 9h14" />
+                                <circle cx="12" cy="12" r="10" />
+                            </svg>
                             <p class="detail-label">Pressure</p>
                             <p class="detail-value"><span id="pressure">-</span> mb</p>
                         </div>

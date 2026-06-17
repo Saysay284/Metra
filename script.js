@@ -49,15 +49,15 @@ function showMainApp() {
     }, 600);
 }
 
-// === GEOLOCATION - NEW FEATURE ===
+// === GEOLOCATION ===
 function getDeviceLocation() {
     if (!navigator.geolocation) {
-        console.error("Geolocation not supported");
+        console.error("Geolocation not supported by this browser");
+        alert("Your browser doesn't support location detection. Please search manually.");
         showMainApp();
         return;
     }
 
-    // Update input only if it exists
     if (locationInput) {
         locationInput.value = "Detecting location...";
     }
@@ -70,72 +70,123 @@ function getDeviceLocation() {
             showMainApp();
         },
         (error) => {
-            console.error("Geolocation error:", error);
+            console.error("Geolocation error:", error.code, error.message);
+
+            let reason = "Unable to detect your location.";
             if (error.code === error.PERMISSION_DENIED) {
-                console.warn("Location permission denied by user");
+                reason = "Location permission was denied. Enable location access for this site in your browser settings, or search manually.";
+            } else if (error.code === error.POSITION_UNAVAILABLE) {
+                reason = "Location information is unavailable right now.";
+            } else if (error.code === error.TIMEOUT) {
+                reason = "Location request timed out. Try again or search manually.";
             }
-            if (locationInput) {
-                locationInput.value = "";
-            }
+            alert(reason);
+
+            if (locationInput) locationInput.value = "";
             showMainApp();
         },
-        { timeout: 10000, enableHighAccuracy: false }
+        {
+            timeout: 10000,
+            enableHighAccuracy: true,
+            maximumAge: 0,
+        }
     );
 }
+
 async function fetchWeatherByCoordinates(latitude, longitude) {
     try {
-        // Reverse geocode to get city name
-        const geoUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`;
-        const geoResponse = await fetch(geoUrl);
+        const geoResponse = await fetch(
+            `http://localhost:3000/api/reverse-geocode?lat=${latitude}&lon=${longitude}`
+        );
+        if (!geoResponse.ok) throw new Error("Reverse geocode failed");
         const geoData = await geoResponse.json();
 
-        const cityName = geoData.address?.city || geoData.address?.town || "Your Location";
+        const cityName = geoData.city || "Your Location";
+        const timezone = geoData.timezone || "UTC";
+        window.currentTimezone = timezone;
+        window.currentCoords = { latitude, longitude };
 
-        // Fetch weather
-        const weatherUrl = `http://localhost:3000/api/weather?lat=${latitude}&lon=${longitude}&city=${encodeURIComponent(cityName)}`;
-        const weatherResponse = await fetch(weatherUrl);
-
+        const weatherResponse = await fetch(
+            `http://localhost:3000/api/weather?lat=${latitude}&lon=${longitude}&city=${encodeURIComponent(
+                cityName
+            )}`
+        );
         if (!weatherResponse.ok) throw new Error("Weather API failed");
 
         const weatherData = await weatherResponse.json();
-        updateWeatherDisplay(weatherData, cityName, "UTC");
+        updateWeatherDisplay(weatherData, cityName, timezone);
+        renderMapAndRadar(latitude, longitude);
         fetchMetraAIBriefing();
-
     } catch (error) {
-        console.error("Error:", error);
+        console.error("Error fetching weather by coordinates:", error);
+        alert("Couldn't load weather for your location. Please try searching manually.");
+    }
+}
+
+// === MAP & RADAR ===
+function renderMapAndRadar(latitude, longitude) {
+    if (map) {
+        map.innerHTML = `<iframe
+        loading="lazy"
+        src="https://www.openstreetmap.org/export/embed.html?bbox=${(longitude - 0.15).toFixed(
+            4
+        )},${(latitude - 0.15).toFixed(4)},${(longitude + 0.15).toFixed(4)},${(
+            latitude + 0.15
+        ).toFixed(4)}&layer=mapnik&marker=${latitude.toFixed(4)},${longitude.toFixed(4)}"
+        style="border:0; width: 100%; height: 100%;"
+      ></iframe>`;
+    }
+    if (radar) {
+        radar.innerHTML = `<iframe
+        loading="lazy"
+        src="https://embed.windy.com/embed2.html?lat=${latitude.toFixed(
+            2
+        )}&lon=${longitude.toFixed(
+            2
+        )}&zoom=7&level=surface&overlay=radar&metricWind=mph&metricTemp=%C2%B0F"
+        style="border:0; width: 100%; height: 100%;"
+      ></iframe>`;
     }
 }
 
 // === UPDATE WEATHER DISPLAY ===
 function updateWeatherDisplay(weatherData, cityName, timezone) {
-    document.getElementById('location').innerText = cityName;
+    document.getElementById("location").innerText = cityName;
 
     const conditionText = interpretWeatherCode(weatherData.current.weather_code);
-    document.getElementById('condition').innerText = conditionText;
+    document.getElementById("condition").innerText = conditionText;
 
-    const localHour = parseInt(new Date().toLocaleString('en-US', {
-        hour: 'numeric', hour12: false, timeZone: timezone
-    }));
+    const localHour = parseInt(
+        new Date().toLocaleString("en-US", {
+            hour: "numeric",
+            hour12: false,
+            timeZone: timezone,
+        })
+    );
 
     if (currentWeatherIcon) {
-        currentWeatherIcon.innerText = weatherIcon(weatherData.current.weather_code, localHour);
+        currentWeatherIcon.innerHTML = weatherIcon(weatherData.current.weather_code, localHour);
     }
 
     const tempF = Math.round(weatherData.current.temperature_2m);
-    const tempC = Math.round((tempF - 32) * 5 / 9);
-    document.getElementById('TempF').innerText = tempF;
-    document.getElementById('TempC').innerText = tempC;
-    document.getElementById('humidity').innerText = weatherData.current.relative_humidity_2m;
-    document.getElementById('windSpeed').innerText = weatherData.current.wind_speed_10m;
-    document.getElementById('time').innerText = new Date().toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZone: timezone
+    const tempC = Math.round(((tempF - 32) * 5) / 9);
+    document.getElementById("TempF").innerText = tempF;
+    document.getElementById("TempC").innerText = tempC;
+    document.getElementById("humidity").innerText = weatherData.current.relative_humidity_2m;
+    document.getElementById("windSpeed").innerText = weatherData.current.wind_speed_10m;
+    document.getElementById("time").innerText = new Date().toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: timezone,
     });
 
-    document.getElementById('uvIndex').innerText = weatherData.daily.uv_index_max[0];
-    document.getElementById('pressure').innerText = Math.round(weatherData.current.surface_pressure);
-    document.getElementById('visibility').innerText = (weatherData.current.visibility / 1609).toFixed(1);
+    document.getElementById("uvIndex").innerText = weatherData.daily.uv_index_max[0];
+    document.getElementById("pressure").innerText = Math.round(
+        weatherData.current.surface_pressure
+    );
+    document.getElementById("visibility").innerText = (
+        weatherData.current.visibility / 1609
+    ).toFixed(1);
 
     const formatTime = (isoArray) => {
         if (!isoArray || !isoArray[0]) return "N/A";
@@ -146,9 +197,9 @@ function updateWeatherDisplay(weatherData, cityName, timezone) {
         return isoArray[0];
     };
 
-    document.getElementById('sunrise').innerText = formatTime(weatherData.daily.sunrise);
-    document.getElementById('sunset').innerText = formatTime(weatherData.daily.sunset);
-    document.getElementById('airQuality').innerText = "Good";
+    document.getElementById("sunrise").innerText = formatTime(weatherData.daily.sunrise);
+    document.getElementById("sunset").innerText = formatTime(weatherData.daily.sunset);
+    document.getElementById("airQuality").innerText = "Good";
 
     // Hourly
     const hourCount = Math.min(hrlyTemp.length, weatherData.hourly.temperature_2m.length);
@@ -156,20 +207,23 @@ function updateWeatherDisplay(weatherData, cityName, timezone) {
         hrlyTemp[i].innerText = Math.round(weatherData.hourly.temperature_2m[i]);
         hrlyHumidity[i].innerText = `${weatherData.hourly.relative_humidity_2m[i]}%`;
         if (hrlyWeatherIcon[i]) {
-            hrlyWeatherIcon[i].innerText = weatherIcon(weatherData.hourly.weather_code[i], (localHour + i) % 24);
+            hrlyWeatherIcon[i].innerHTML = weatherIcon(
+                weatherData.hourly.weather_code[i],
+                (localHour + i) % 24
+            );
         }
     }
 
     // Weekly
     const dayCount = Math.min(wklyTemp.length, weatherData.daily.temperature_2m_max.length);
-    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const todayIndex = new Date().getDay();
-    const allWeeklyCards = document.querySelectorAll('.weeklyData');
+    const allWeeklyCards = document.querySelectorAll(".weeklyData");
 
     allWeeklyCards.forEach((card, i) => {
-        const dayLabel = card.querySelector('p:first-child');
+        const dayLabel = card.querySelector("p:first-child");
         if (i === 0) {
-            dayLabel.innerText = 'Today';
+            dayLabel.innerText = "Today";
         } else {
             dayLabel.innerText = dayNames[(todayIndex + i) % 7];
         }
@@ -178,9 +232,11 @@ function updateWeatherDisplay(weatherData, cityName, timezone) {
     for (let i = 0; i < dayCount; i++) {
         wklyTemp[i].innerText = Math.round(weatherData.daily.temperature_2m_max[i]);
         wklyHumidity[i].innerText = `${weatherData.daily.relative_humidity_2m_max[i]}%`;
-        wklyWeatherCondition[i].innerText = interpretWeatherCode(weatherData.daily.weather_code[i]);
+        wklyWeatherCondition[i].innerText = interpretWeatherCode(
+            weatherData.daily.weather_code[i]
+        );
         if (wklyWeatherIcon[i]) {
-            wklyWeatherIcon[i].innerText = weatherIcon(weatherData.daily.weather_code[i], 12);
+            wklyWeatherIcon[i].innerHTML = weatherIcon(weatherData.daily.weather_code[i], 12);
         }
     }
 
@@ -194,18 +250,32 @@ theme.addEventListener("click", () => {
         document.documentElement.dataset.theme === "light" ? "dark" : "light";
 });
 
-// === WEATHER CODE TO EMOJI ===
+// === WEATHER CODE TO ICON (SVG, not emoji) ===
+const weatherIconPaths = {
+    sunny: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`,
+    clearNight: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`,
+    cloudy: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h.79a4.5 4.5 0 1 1 0 9z"/></svg>`,
+    partlyCloudyNight: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3a6 6 0 0 0 0 12 6 6 0 0 1-7.5 5.8A7 7 0 1 0 13 3z"/><path d="M17.5 19H10"/></svg>`,
+    fog: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 17H7a4 4 0 1 1 0-8h.5a5 5 0 0 1 9.6 1.5"/><line x1="3" y1="20" x2="21" y2="20"/><line x1="3" y1="17" x2="9" y2="17"/><line x1="13" y1="17" x2="21" y2="17"/></svg>`,
+    drizzle: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 14.5A4.5 4.5 0 0 0 15.5 6a5.5 5.5 0 0 0-10.6 1.5A4 4 0 0 0 6 15.5"/><line x1="8" y1="19" x2="8" y2="21"/><line x1="12" y1="19" x2="12" y2="21"/><line x1="16" y1="19" x2="16" y2="21"/></svg>`,
+    rain: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 13.5A4.5 4.5 0 0 0 15.5 5a5.5 5.5 0 0 0-10.6 1.5A4 4 0 0 0 6 14.5"/><line x1="8" y1="17" x2="7" y2="22"/><line x1="13" y1="17" x2="12" y2="22"/><line x1="18" y1="17" x2="17" y2="22"/></svg>`,
+    snow: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 17.58A5 5 0 0 0 18 8h-1.26A8 8 0 1 0 4 16.25"/><line x1="8" y1="16" x2="8.01" y2="16"/><line x1="8" y1="20" x2="8.01" y2="20"/><line x1="12" y1="18" x2="12.01" y2="18"/><line x1="12" y1="22" x2="12.01" y2="22"/><line x1="16" y1="16" x2="16.01" y2="16"/><line x1="16" y1="20" x2="16.01" y2="20"/></svg>`,
+    storm: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 16.9A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.9"/><polyline points="13 11 9 17 15 17 11 23"/></svg>`,
+    thermo: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0z"/></svg>`,
+};
+
 function weatherIcon(code, localHour = new Date().getHours()) {
     const isNight = localHour < 6 || localHour >= 19;
-    if (code === 0) return isNight ? "🌙" : "☀️";
-    if (code >= 1 && code <= 3) return isNight ? "☁️" : "⛅";
-    if (code >= 45 && code <= 48) return "🌫️";
-    if (code >= 51 && code <= 55) return "🌦️";
-    if (code >= 61 && code <= 65) return "🌧️";
-    if (code >= 71 && code <= 77) return "❄️";
-    if (code >= 80 && code <= 82) return "🌨️";
-    if (code >= 95 && code <= 99) return "⛈️";
-    return "🌡️";
+
+    if (code === 0) return isNight ? weatherIconPaths.clearNight : weatherIconPaths.sunny;
+    if (code >= 1 && code <= 3) return isNight ? weatherIconPaths.partlyCloudyNight : weatherIconPaths.cloudy;
+    if (code >= 45 && code <= 48) return weatherIconPaths.fog;
+    if (code >= 51 && code <= 55) return weatherIconPaths.drizzle;
+    if (code >= 61 && code <= 65) return weatherIconPaths.rain;
+    if (code >= 71 && code <= 77) return weatherIconPaths.snow;
+    if (code >= 80 && code <= 82) return weatherIconPaths.rain;
+    if (code >= 95 && code <= 99) return weatherIconPaths.storm;
+    return weatherIconPaths.thermo;
 }
 
 // === WEATHER CODE TO TEXT ===
@@ -223,13 +293,13 @@ function interpretWeatherCode(code) {
 
 // === AI BRIEFING ===
 async function fetchMetraAIBriefing() {
-    const aiSummaryElement = document.getElementById('aiSummary');
+    const aiSummaryElement = document.getElementById("aiSummary");
     if (!aiSummaryElement) return;
 
-    const city = document.getElementById('location').innerText;
-    const tempC = document.getElementById('TempC').innerText;
-    const condition = document.getElementById('condition').innerText;
-    const humidity = document.getElementById('humidity').innerText;
+    const city = document.getElementById("location").innerText;
+    const tempC = document.getElementById("TempC").innerText;
+    const condition = document.getElementById("condition").innerText;
+    const humidity = document.getElementById("humidity").innerText;
     const selectedLanguage = language.value;
 
     if (!city || city === "-") return;
@@ -237,16 +307,18 @@ async function fetchMetraAIBriefing() {
     aiSummaryElement.innerText = "🤖 Consulting AI...";
 
     try {
-        const response = await fetch('http://localhost:3000/api/ai-briefing', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+        const response = await fetch("http://localhost:3000/api/ai-briefing", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                city, tempC,
-                tempF: document.getElementById('TempF').innerText,
-                condition, humidity,
+                city,
+                tempC,
+                tempF: document.getElementById("TempF").innerText,
+                condition,
+                humidity,
                 language: selectedLanguage,
-                timezone: window.currentTimezone || 'UTC'
-            })
+                timezone: window.currentTimezone || "UTC",
+            }),
         });
         const data = await response.json();
         aiSummaryElement.innerText = data.summary || "Unable to load briefing.";
@@ -263,7 +335,9 @@ async function fetchWeatherByCity(citySearched) {
     if (!citySearched) return;
 
     try {
-        const geoResponse = await fetch(`http://localhost:3000/api/geocode?name=${encodeURIComponent(citySearched)}`);
+        const geoResponse = await fetch(
+            `http://localhost:3000/api/geocode?name=${encodeURIComponent(citySearched)}`
+        );
         if (!geoResponse.ok) throw new Error("Geocode failed");
         const geoData = await geoResponse.json();
 
@@ -275,13 +349,17 @@ async function fetchWeatherByCity(citySearched) {
         const { latitude, longitude, name, country, timezone } = geoData.results[0];
         window.currentTimezone = timezone;
 
-        const weatherResponse = await fetch(`http://localhost:3000/api/weather?lat=${latitude}&lon=${longitude}&city=${encodeURIComponent(name)}`);
+        const weatherResponse = await fetch(
+            `http://localhost:3000/api/weather?lat=${latitude}&lon=${longitude}&city=${encodeURIComponent(
+                name
+            )}`
+        );
         if (!weatherResponse.ok) throw new Error("Weather failed");
         const weatherData = await weatherResponse.json();
 
         updateWeatherDisplay(weatherData, `${name}, ${country}`, timezone);
+        renderMapAndRadar(latitude, longitude);
         fetchMetraAIBriefing();
-
     } catch (error) {
         console.error("Error:", error);
     }
@@ -291,6 +369,12 @@ async function fetchWeatherByCity(citySearched) {
 locationInput.addEventListener("keypress", async (event) => {
     if (event.key === "Enter") {
         const citySearched = locationInput.value.trim();
+        if (!citySearched) return;
+
+        document.getElementById("condition").innerText = "Loading...";
+        document.getElementById("TempF").innerText = "-";
+        document.getElementById("TempC").innerText = "-";
+
         await fetchWeatherByCity(citySearched);
     }
 });
@@ -299,19 +383,19 @@ locationInput.addEventListener("keypress", async (event) => {
 const saveLocButton = document.getElementById("saveLoc");
 
 saveLocButton.addEventListener("click", () => {
-    const currentLocationName = document.getElementById('location').innerText;
+    const currentLocationName = document.getElementById("location").innerText;
     if (!currentLocationName || currentLocationName === "-") return;
 
     let savedCities = JSON.parse(localStorage.getItem("metraSavedCities")) || [];
-    if (savedCities.some(c => c.name === currentLocationName)) return;
+    if (savedCities.some((c) => c.name === currentLocationName)) return;
 
     const snapshot = {
         name: currentLocationName,
-        tempF: document.getElementById('TempF').innerText,
-        tempC: document.getElementById('TempC').innerText,
-        condition: document.getElementById('condition').innerText,
-        humidity: document.getElementById('humidity').innerText,
-        windSpeed: document.getElementById('windSpeed').innerText
+        tempF: document.getElementById("TempF").innerText,
+        tempC: document.getElementById("TempC").innerText,
+        condition: document.getElementById("condition").innerText,
+        humidity: document.getElementById("humidity").innerText,
+        windSpeed: document.getElementById("windSpeed").innerText,
     };
 
     savedCities.push(snapshot);
@@ -325,7 +409,7 @@ function displaySavedLocations() {
     savedLocationsList.innerHTML = "";
     const savedCities = JSON.parse(localStorage.getItem("metraSavedCities")) || [];
 
-    savedCities.forEach(cityObj => {
+    savedCities.forEach((cityObj) => {
         const li = document.createElement("li");
         li.innerText = cityObj.name;
         li.addEventListener("click", () => {
