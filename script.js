@@ -336,7 +336,7 @@ async function fetchWeatherByCity(citySearched) {
 
     try {
         const geoResponse = await fetch(
-            `http://localhost:3000/api/geocode?name=${encodeURIComponent(citySearched)}`
+            `/api/geocode?name=${encodeURIComponent(citySearched)}`
         );
         if (!geoResponse.ok) throw new Error("Geocode failed");
         const geoData = await geoResponse.json();
@@ -350,7 +350,7 @@ async function fetchWeatherByCity(citySearched) {
         window.currentTimezone = timezone;
 
         const weatherResponse = await fetch(
-            `http://localhost:3000/api/weather?lat=${latitude}&lon=${longitude}&city=${encodeURIComponent(
+            `/api/weather?lat=${latitude}&lon=${longitude}&city=${encodeURIComponent(
                 name
             )}`
         );
