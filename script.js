@@ -77,7 +77,8 @@ function getDeviceLocation() {
         async (position) => {
             const { latitude, longitude } = position.coords;
             console.log("Location detected:", latitude, longitude);
-            await fetchWeatherByCoordinates(latitude, longitude);
+            // When getting device location, we don't have a city name yet, so it will trigger reverse geocoding
+            await fetchWeatherByCoordinates(latitude, longitude, "Your Location", "", ""); 
             showMainApp();
         },
         (error) => {
@@ -104,28 +105,39 @@ function getDeviceLocation() {
     );
 }
 
-async function fetchWeatherByCoordinates(latitude, longitude) {
+// === FETCH WEATHER BY COORDINATES (REFACTORED for direct use) ===
+async function fetchWeatherByCoordinates(latitude, longitude, cityName = 'Your Location', countryName = '', timezone = 'UTC') {
     try {
-        const geoResponse = await fetch(
-            `http://localhost:3000/api/reverse-geocode?lat=${latitude}&lon=${longitude}`
-        );
-        if (!geoResponse.ok) throw new Error("Reverse geocode failed");
-        const geoData = await geoResponse.json();
+        // If cityName is 'Your Location', we might need to reverse geocode to get a proper city name
+        // However, for consistency with Open-Meteo's geocoding output,
+        // we'll assume a good city name is passed if we're coming from a suggestion
+        // and only do reverse geocode if cityName is generic or lat/lon is from device directly.
+        let actualCityName = cityName;
+        let actualCountryName = countryName;
+        let actualTimezone = timezone;
 
-        const cityName = geoData.city || "Your Location";
-        const timezone = geoData.timezone || "UTC";
-        window.currentTimezone = timezone;
+        if (cityName === 'Your Location' || !timezone || !countryName) {
+            // Perform reverse geocoding if coming from device location or if full info is missing
+            const geoResponse = await fetch(
+                `/api/reverse-geocode?lat=${latitude}&lon=${longitude}`
+            );
+            if (!geoResponse.ok) throw new Error("Reverse geocode failed");
+            const geoData = await geoResponse.json();
+            actualCityName = geoData.city || cityName;
+            actualCountryName = geoData.country || countryName;
+            actualTimezone = geoData.timezone || timezone;
+        }
+        
         window.currentCoords = { latitude, longitude };
+        window.currentTimezone = actualTimezone;
 
         const weatherResponse = await fetch(
-            `http://localhost:3000/api/weather?lat=${latitude}&lon=${longitude}&city=${encodeURIComponent(
-                cityName
-            )}`
+            `/api/weather?lat=${latitude}&lon=${longitude}` // Removed 'city' param from weather API call as it's not used by Open-Meteo
         );
         if (!weatherResponse.ok) throw new Error("Weather API failed");
 
         const weatherData = await weatherResponse.json();
-        updateWeatherDisplay(weatherData, cityName, timezone);
+        updateWeatherDisplay(weatherData, `${actualCityName}, ${actualCountryName}`, actualTimezone);
         renderMapAndRadar(latitude, longitude);
         fetchMetraAIBriefing();
     } catch (error) {
