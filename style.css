@@ -529,6 +529,7 @@ html[data-theme="light"] #themeToggle {
 }
 
 #searchBar {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -540,10 +541,57 @@ html[data-theme="light"] #themeToggle {
     box-shadow: var(--shadow-sm);
 }
 
-html[data-theme="light"] #searchBar {
+#autocompleteList {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    background: var(--surface-dark);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    box-shadow: var(--shadow-md);
+    max-height: 260px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+    padding: 8px 0;
+}
+
+#autocompleteList.visible {
+    display: block;
+}
+
+.autocomplete-option {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 10px 16px;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+}
+
+.autocomplete-option:hover,
+.autocomplete-option:focus {
+    background: var(--hover-bg);
+    outline: none;
+}
+
+html[data-theme="light"] #autocompleteList {
     background: #ffffff;
-    border: 1.5px solid rgba(30, 136, 229, 0.15);
-    box-shadow: 0 2px 12px rgba(30, 136, 229, 0.06);
+    border-color: rgba(30, 136, 229, 0.15);
+    box-shadow: 0 8px 24px rgba(30, 136, 229, 0.08);
+}
+
+html[data-theme="light"] .autocomplete-option {
+    color: #1a2332;
+}
+
+html[data-theme="light"] .autocomplete-option:hover,
+html[data-theme="light"] .autocomplete-option:focus {
+    background: rgba(30, 136, 229, 0.08);
 }
 
 #searchBar:focus-within {
@@ -564,63 +612,6 @@ html[data-theme="light"] #searchBar {
 #locationInput::placeholder {
     color: var(--text-secondary);
     opacity: 0.7;
-}
-
-/* ===== LOCATION SUGGESTIONS ===== */
-.location-suggestions {
-    position: absolute;
-    top: 100%; /* Position below the search bar */
-    left: 0;
-    right: 0;
-    z-index: 999;
-    background: var(--surface-dark);
-    border: 1.5px solid var(--border-color);
-    border-top: none;
-    border-radius: 0 0 14px 14px;
-    box-shadow: var(--shadow-sm);
-    max-height: 250px;
-    overflow-y: auto;
-    list-style: none;
-    padding: 0;
-    margin-top: -1px; /* Overlap border */
-    display: none; /* Hidden by default */
-}
-
-.location-suggestions.active {
-    display: block; /* Show when active */
-}
-
-html[data-theme="light"] .location-suggestions {
-    background: #ffffff;
-    border: 1.5px solid rgba(30, 136, 229, 0.15);
-    box-shadow: 0 2px 12px rgba(30, 136, 229, 0.06);
-}
-
-.suggestion-item {
-    padding: 12px 16px;
-    cursor: pointer;
-    color: var(--text-primary);
-    font-size: 0.95rem;
-    transition: background 0.2s ease, color 0.2s ease;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.suggestion-item:last-child {
-    border-bottom: none;
-    border-radius: 0 0 13px 13px; /* Apply to last item for rounded bottom */
-}
-
-.suggestion-item:hover {
-    background: var(--hover-bg);
-    color: var(--accent-primary);
-}
-
-html[data-theme="light"] .suggestion-item {
-    border-bottom: 1px solid rgba(30, 136, 229, 0.08);
-}
-
-html[data-theme="light"] .suggestion-item:hover {
-    background: rgba(30, 136, 229, 0.04);
 }
 
 .location-btn {

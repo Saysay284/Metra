@@ -38,17 +38,11 @@ const saved_Humidity = document.getElementById("savedHumidity");
 const saved_WindSpeed = document.getElementById("savedWindSpeed");
 
 const locationInput = document.getElementById("locationInput");
-const locationSuggestions = document.getElementById("locationSuggestions");
-
-// Debounce utility function
-function debounce(func, delay) {
-    let timeout;
-    return function(...args) {
-        const context = this;
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(context, args), delay);
-    };
-}
+const autocompleteList = document.getElementById("autocompleteList");
+const searchBar = document.getElementById("searchBar");
+const API_BASE_URL = window.location.origin && window.location.origin !== 'null' ? window.location.origin : 'http://localhost:3000';
+let suggestionAbortController = null;
+let suggestionDebounceTimeout = null;
 
 // === SHOW/HIDE APP ===
 function showMainApp() {
@@ -58,6 +52,68 @@ function showMainApp() {
         mainApp.style.display = "block";
         mainApp.classList.add("visible");
     }, 600);
+}
+
+function clearLocationSuggestions() {
+    if (!autocompleteList) return;
+    autocompleteList.innerHTML = "";
+    autocompleteList.classList.remove("visible");
+}
+
+function buildSuggestionLabel(result) {
+    const placeParts = [result.name, result.admin1, result.country].filter(Boolean);
+    return placeParts.join(", ");
+}
+
+function renderLocationSuggestions(results) {
+    if (!autocompleteList || !results || results.length === 0) {
+        clearLocationSuggestions();
+        return;
+    }
+
+    autocompleteList.innerHTML = "";
+    results.slice(0, 5).forEach((result) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "autocomplete-option";
+        button.setAttribute("role", "option");
+        button.textContent = buildSuggestionLabel(result);
+        button.addEventListener("click", async () => {
+            locationInput.value = button.textContent;
+            clearLocationSuggestions();
+            await fetchWeatherByCity(button.textContent);
+        });
+        autocompleteList.appendChild(button);
+    });
+    autocompleteList.classList.add("visible");
+}
+
+async function fetchLocationSuggestions(query) {
+    if (!query || query.trim().length < 2) {
+        clearLocationSuggestions();
+        return;
+    }
+
+    suggestionDebounceTimeout && clearTimeout(suggestionDebounceTimeout);
+    suggestionDebounceTimeout = setTimeout(async () => {
+        suggestionAbortController?.abort();
+        suggestionAbortController = new AbortController();
+
+        try {
+            const response = await fetch(
+                `${API_BASE_URL}/api/geocode?name=${encodeURIComponent(query)}&count=5`,
+                { signal: suggestionAbortController.signal }
+            );
+            if (!response.ok) throw new Error("Autocomplete request failed");
+
+            const data = await response.json();
+            renderLocationSuggestions(data.results || []);
+        } catch (error) {
+            if (error.name === "AbortError") return;
+            console.error("Autocomplete fetch error:", error);
+            clearLocationSuggestions();
+        }
+    }, 200);
 }
 
 // === GEOLOCATION ===
@@ -77,8 +133,7 @@ function getDeviceLocation() {
         async (position) => {
             const { latitude, longitude } = position.coords;
             console.log("Location detected:", latitude, longitude);
-            // When getting device location, we don't have a city name yet, so it will trigger reverse geocoding
-            await fetchWeatherByCoordinates(latitude, longitude, "Your Location", "", ""); 
+            await fetchWeatherByCoordinates(latitude, longitude);
             showMainApp();
         },
         (error) => {
@@ -105,98 +160,34 @@ function getDeviceLocation() {
     );
 }
 
-// === FETCH WEATHER BY COORDINATES (REFACTORED for direct use) ===
-async function fetchWeatherByCoordinates(latitude, longitude, cityName = 'Your Location', countryName = '', timezone = 'UTC') {
+async function fetchWeatherByCoordinates(latitude, longitude) {
     try {
-        // If cityName is 'Your Location', we might need to reverse geocode to get a proper city name
-        // However, for consistency with Open-Meteo's geocoding output,
-        // we'll assume a good city name is passed if we're coming from a suggestion
-        // and only do reverse geocode if cityName is generic or lat/lon is from device directly.
-        let actualCityName = cityName;
-        let actualCountryName = countryName;
-        let actualTimezone = timezone;
+        const geoResponse = await fetch(
+            `${API_BASE_URL}/api/reverse-geocode?lat=${latitude}&lon=${longitude}`
+        );
+        if (!geoResponse.ok) throw new Error("Reverse geocode failed");
+        const geoData = await geoResponse.json();
 
-        if (cityName === 'Your Location' || !timezone || !countryName) {
-            // Perform reverse geocoding if coming from device location or if full info is missing
-            const geoResponse = await fetch(
-                `/api/reverse-geocode?lat=${latitude}&lon=${longitude}`
-            );
-            if (!geoResponse.ok) throw new Error("Reverse geocode failed");
-            const geoData = await geoResponse.json();
-            actualCityName = geoData.city || cityName;
-            actualCountryName = geoData.country || countryName;
-            actualTimezone = geoData.timezone || timezone;
-        }
-        
+        const cityName = geoData.city || "Your Location";
+        const timezone = geoData.timezone || "UTC";
+        window.currentTimezone = timezone;
         window.currentCoords = { latitude, longitude };
-        window.currentTimezone = actualTimezone;
 
         const weatherResponse = await fetch(
-            `/api/weather?lat=${latitude}&lon=${longitude}` // Removed 'city' param from weather API call as it's not used by Open-Meteo
+            `${API_BASE_URL}/api/weather?lat=${latitude}&lon=${longitude}&city=${encodeURIComponent(
+                cityName
+            )}`
         );
         if (!weatherResponse.ok) throw new Error("Weather API failed");
 
         const weatherData = await weatherResponse.json();
-        updateWeatherDisplay(weatherData, `${actualCityName}, ${actualCountryName}`, actualTimezone);
+        updateWeatherDisplay(weatherData, cityName, timezone);
         renderMapAndRadar(latitude, longitude);
         fetchMetraAIBriefing();
     } catch (error) {
         console.error("Error fetching weather by coordinates:", error);
         alert("Couldn't load weather for your location. Please try searching manually.");
     }
-}
-
-// === LOCATION SUGGESTIONS ===
-async function fetchLocationSuggestions(query) {
-    if (query.length < 3) { // Only fetch for queries with 3 or more characters
-        locationSuggestions.innerHTML = '';
-        locationSuggestions.classList.remove('active');
-        return;
-    }
-    try {
-        const response = await fetch(`/api/geocode?name=${encodeURIComponent(query)}`);
-        if (!response.ok) throw new Error('Geocode suggestions failed');
-        const data = await response.json();
-        displayLocationSuggestions(data.results || []);
-    } catch (error) {
-        console.error('Error fetching location suggestions:', error);
-        locationSuggestions.innerHTML = '';
-        locationSuggestions.classList.remove('active');
-    }
-}
-
-function displayLocationSuggestions(suggestions) {
-    locationSuggestions.innerHTML = ''; // Clear previous suggestions
-    if (suggestions.length === 0) {
-        locationSuggestions.classList.remove('active');
-        return;
-    }
-
-    const fragment = document.createDocumentFragment();
-    suggestions.forEach(place => {
-        const li = document.createElement('li');
-        li.classList.add('suggestion-item');
-        // Display full address if available, otherwise name and country
-        const displayName = place.address && place.address.city && place.address.country ? 
-                            `${place.address.city}, ${place.address.country}` :
-                            `${place.name}, ${place.country}`;
-        li.innerText = displayName;
-        li.dataset.latitude = place.latitude;
-        li.dataset.longitude = place.longitude;
-        li.dataset.cityName = place.name; // Keep original city name for weather API call
-        li.dataset.countryName = place.country;
-        li.dataset.timezone = place.timezone;
-
-        li.addEventListener('click', () => {
-            locationInput.value = displayName; // Populate input with selected suggestion
-            fetchWeatherByCoordinates(place.latitude, place.longitude, place.name, place.country, place.timezone);
-            locationSuggestions.innerHTML = ''; // Clear suggestions
-            locationSuggestions.classList.remove('active');
-        });
-        fragment.appendChild(li);
-    });
-    locationSuggestions.appendChild(fragment);
-    locationSuggestions.classList.add('active'); // Show suggestions container
 }
 
 // === MAP & RADAR ===
@@ -383,7 +374,7 @@ async function fetchMetraAIBriefing() {
     aiSummaryElement.innerText = "🤖 Consulting AI...";
 
     try {
-        const response = await fetch("http://localhost:3000/api/ai-briefing", {
+        const response = await fetch(`${API_BASE_URL}/api/ai-briefing`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -407,54 +398,55 @@ async function fetchMetraAIBriefing() {
 language.addEventListener("change", fetchMetraAIBriefing);
 
 // === FETCH WEATHER BY CITY ===
-// === FETCH WEATHER BY CITY NAME (FOR ENTER KEY/SAVED LOCATIONS) ===
-async function fetchWeatherByCityName(citySearched) {
+async function fetchWeatherByCity(citySearched) {
     if (!citySearched) return;
 
     try {
         const geoResponse = await fetch(
-            `/api/geocode?name=${encodeURIComponent(citySearched)}`
+            `${API_BASE_URL}/api/geocode?name=${encodeURIComponent(citySearched)}&count=5`
         );
         if (!geoResponse.ok) throw new Error("Geocode failed");
         const geoData = await geoResponse.json();
 
         if (!geoData.results || geoData.results.length === 0) {
             alert("Location not found.");
-            locationSuggestions.innerHTML = ''; // Clear suggestions
-            locationSuggestions.classList.remove('active');
             return;
         }
 
         const { latitude, longitude, name, country, timezone } = geoData.results[0];
-        // Use the more direct fetchWeatherByCoordinates once we have lat/lon/name/country/timezone
-        await fetchWeatherByCoordinates(latitude, longitude, name, country, timezone);
-        
-        locationSuggestions.innerHTML = ''; // Clear suggestions
-        locationSuggestions.classList.remove('active');
+        window.currentTimezone = timezone;
 
+        const weatherResponse = await fetch(
+            `${API_BASE_URL}/api/weather?lat=${latitude}&lon=${longitude}&city=${encodeURIComponent(
+                name
+            )}`
+        );
+        if (!weatherResponse.ok) throw new Error("Weather failed");
+        const weatherData = await weatherResponse.json();
+
+        updateWeatherDisplay(weatherData, `${name}, ${country}`, timezone);
+        renderMapAndRadar(latitude, longitude);
+        fetchMetraAIBriefing();
     } catch (error) {
-        console.error("Error fetching weather by city name:", error);
-        alert("Couldn't load weather for your search. Please try again.");
-        locationSuggestions.innerHTML = '';
-        locationSuggestions.classList.remove('active');
+        console.error("Error:", error);
     }
 }
 
 // === SEARCH ===
-const debouncedFetchSuggestions = debounce(fetchLocationSuggestions, 300);
-
-locationInput.addEventListener("input", (event) => {
-    const query = event.target.value.trim();
-    if (query.length > 0) {
-        debouncedFetchSuggestions(query);
-    } else {
-        locationSuggestions.innerHTML = '';
-        locationSuggestions.classList.remove('active');
+locationInput.addEventListener("input", async () => {
+    const query = locationInput.value.trim();
+    if (!query) {
+        clearLocationSuggestions();
+        return;
     }
+    await fetchLocationSuggestions(query);
 });
 
 locationInput.addEventListener("keypress", async (event) => {
     if (event.key === "Enter") {
+        event.preventDefault();
+        clearLocationSuggestions();
+
         const citySearched = locationInput.value.trim();
         if (!citySearched) return;
 
@@ -462,15 +454,15 @@ locationInput.addEventListener("keypress", async (event) => {
         document.getElementById("TempF").innerText = "-";
         document.getElementById("TempC").innerText = "-";
 
-        await fetchWeatherByCityName(citySearched); // Use the new function
+        await fetchWeatherByCity(citySearched);
     }
 });
 
-// Clear suggestions when clicking outside the search bar or suggestion list
-document.addEventListener('click', (event) => {
-    if (!locationInput.contains(event.target) && !locationSuggestions.contains(event.target)) {
-        locationSuggestions.innerHTML = '';
-        locationSuggestions.classList.remove('active');
+document.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!searchBar || !target) return;
+    if (!searchBar.contains(target)) {
+        clearLocationSuggestions();
     }
 });
 
@@ -516,7 +508,7 @@ function displaySavedLocations() {
             if (saved_WindSpeed) saved_WindSpeed.innerText = cityObj.windSpeed;
 
             locationInput.value = cityObj.name;
-            fetchWeatherByCityName(cityObj.name); // Use the new function
+            fetchWeatherByCity(cityObj.name);
         });
         savedLocationsList.appendChild(li);
     });
