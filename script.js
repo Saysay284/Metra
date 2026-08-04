@@ -44,6 +44,28 @@ const API_BASE_URL = window.location.origin && window.location.origin !== 'null'
 let suggestionAbortController = null;
 let suggestionDebounceTimeout = null;
 
+// === SIMPLE VISIBLE ERROR BANNER ===
+// Replaces silent console.error-only failures so problems are actually visible in the UI.
+function showErrorBanner(message) {
+    let banner = document.getElementById("metraErrorBanner");
+    if (!banner) {
+        banner = document.createElement("div");
+        banner.id = "metraErrorBanner";
+        banner.style.cssText = `
+            position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+            background: #d64545; color: #fff; padding: 10px 18px; border-radius: 8px;
+            font-family: sans-serif; font-size: 14px; z-index: 9999; max-width: 90vw;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.25); cursor: pointer;
+        `;
+        banner.title = "Click to dismiss";
+        banner.addEventListener("click", () => banner.remove());
+        document.body.appendChild(banner);
+    }
+    banner.innerText = message;
+    clearTimeout(banner._hideTimeout);
+    banner._hideTimeout = setTimeout(() => banner.remove(), 8000);
+}
+
 // === SHOW/HIDE APP ===
 function showMainApp() {
     landingPage.classList.add("hidden");
@@ -104,7 +126,7 @@ async function fetchLocationSuggestions(query) {
                 `${API_BASE_URL}/api/geocode?name=${encodeURIComponent(query)}&count=5`,
                 { signal: suggestionAbortController.signal }
             );
-            if (!response.ok) throw new Error("Autocomplete request failed");
+            if (!response.ok) throw new Error(`Autocomplete request failed (status ${response.status})`);
 
             const data = await response.json();
             renderLocationSuggestions(data.results || []);
@@ -112,6 +134,8 @@ async function fetchLocationSuggestions(query) {
             if (error.name === "AbortError") return;
             console.error("Autocomplete fetch error:", error);
             clearLocationSuggestions();
+            // Not user-facing on purpose: autocomplete failing silently while typing is fine,
+            // the Enter-key search below will surface a real error if the city truly can't be found.
         }
     }, 200);
 }
@@ -165,7 +189,7 @@ async function fetchWeatherByCoordinates(latitude, longitude) {
         const geoResponse = await fetch(
             `${API_BASE_URL}/api/reverse-geocode?lat=${latitude}&lon=${longitude}`
         );
-        if (!geoResponse.ok) throw new Error("Reverse geocode failed");
+        if (!geoResponse.ok) throw new Error(`Reverse geocode failed (status ${geoResponse.status})`);
         const geoData = await geoResponse.json();
 
         const cityName = geoData.city || "Your Location";
@@ -178,7 +202,7 @@ async function fetchWeatherByCoordinates(latitude, longitude) {
                 cityName
             )}`
         );
-        if (!weatherResponse.ok) throw new Error("Weather API failed");
+        if (!weatherResponse.ok) throw new Error(`Weather API failed (status ${weatherResponse.status})`);
 
         const weatherData = await weatherResponse.json();
         updateWeatherDisplay(weatherData, cityName, timezone);
@@ -388,9 +412,12 @@ async function fetchMetraAIBriefing() {
             }),
         });
         const data = await response.json();
+        if (!response.ok) throw new Error(data.error || `AI briefing failed (status ${response.status})`);
         aiSummaryElement.innerText = data.summary || "Unable to load briefing.";
     } catch (error) {
         console.error("AI Error:", error);
+        // Intentionally not a global alert: the AI blurb is a nice-to-have,
+        // core weather data still displays fine without it.
         aiSummaryElement.innerText = "AI assistant unavailable.";
     }
 }
@@ -405,11 +432,11 @@ async function fetchWeatherByCity(citySearched) {
         const geoResponse = await fetch(
             `${API_BASE_URL}/api/geocode?name=${encodeURIComponent(citySearched)}&count=5`
         );
-        if (!geoResponse.ok) throw new Error("Geocode failed");
+        if (!geoResponse.ok) throw new Error(`Geocode request failed (status ${geoResponse.status})`);
         const geoData = await geoResponse.json();
 
         if (!geoData.results || geoData.results.length === 0) {
-            alert("Location not found.");
+            showErrorBanner(`Couldn't find "${citySearched}". Check the spelling or try a nearby larger city.`);
             return;
         }
 
@@ -421,14 +448,19 @@ async function fetchWeatherByCity(citySearched) {
                 name
             )}`
         );
-        if (!weatherResponse.ok) throw new Error("Weather failed");
+        if (!weatherResponse.ok) {
+            const errBody = await weatherResponse.json().catch(() => ({}));
+            throw new Error(errBody.error || `Weather request failed (status ${weatherResponse.status})`);
+        }
         const weatherData = await weatherResponse.json();
 
         updateWeatherDisplay(weatherData, `${name}, ${country}`, timezone);
         renderMapAndRadar(latitude, longitude);
         fetchMetraAIBriefing();
     } catch (error) {
-        console.error("Error:", error);
+        console.error("Error fetching weather by city:", error);
+        showErrorBanner(`Couldn't load weather: ${error.message}`);
+        document.getElementById("condition").innerText = "Error";
     }
 }
 
