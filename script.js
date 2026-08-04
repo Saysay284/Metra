@@ -38,6 +38,17 @@ const saved_Humidity = document.getElementById("savedHumidity");
 const saved_WindSpeed = document.getElementById("savedWindSpeed");
 
 const locationInput = document.getElementById("locationInput");
+const locationSuggestions = document.getElementById("locationSuggestions");
+
+// Debounce utility function
+function debounce(func, delay) {
+    let timeout;
+    return function(...args) {
+        const context = this;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(context, args), delay);
+    };
+}
 
 // === SHOW/HIDE APP ===
 function showMainApp() {
@@ -121,6 +132,59 @@ async function fetchWeatherByCoordinates(latitude, longitude) {
         console.error("Error fetching weather by coordinates:", error);
         alert("Couldn't load weather for your location. Please try searching manually.");
     }
+}
+
+// === LOCATION SUGGESTIONS ===
+async function fetchLocationSuggestions(query) {
+    if (query.length < 3) { // Only fetch for queries with 3 or more characters
+        locationSuggestions.innerHTML = '';
+        locationSuggestions.classList.remove('active');
+        return;
+    }
+    try {
+        const response = await fetch(`/api/geocode?name=${encodeURIComponent(query)}`);
+        if (!response.ok) throw new Error('Geocode suggestions failed');
+        const data = await response.json();
+        displayLocationSuggestions(data.results || []);
+    } catch (error) {
+        console.error('Error fetching location suggestions:', error);
+        locationSuggestions.innerHTML = '';
+        locationSuggestions.classList.remove('active');
+    }
+}
+
+function displayLocationSuggestions(suggestions) {
+    locationSuggestions.innerHTML = ''; // Clear previous suggestions
+    if (suggestions.length === 0) {
+        locationSuggestions.classList.remove('active');
+        return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    suggestions.forEach(place => {
+        const li = document.createElement('li');
+        li.classList.add('suggestion-item');
+        // Display full address if available, otherwise name and country
+        const displayName = place.address && place.address.city && place.address.country ? 
+                            `${place.address.city}, ${place.address.country}` :
+                            `${place.name}, ${place.country}`;
+        li.innerText = displayName;
+        li.dataset.latitude = place.latitude;
+        li.dataset.longitude = place.longitude;
+        li.dataset.cityName = place.name; // Keep original city name for weather API call
+        li.dataset.countryName = place.country;
+        li.dataset.timezone = place.timezone;
+
+        li.addEventListener('click', () => {
+            locationInput.value = displayName; // Populate input with selected suggestion
+            fetchWeatherByCoordinates(place.latitude, place.longitude, place.name, place.country, place.timezone);
+            locationSuggestions.innerHTML = ''; // Clear suggestions
+            locationSuggestions.classList.remove('active');
+        });
+        fragment.appendChild(li);
+    });
+    locationSuggestions.appendChild(fragment);
+    locationSuggestions.classList.add('active'); // Show suggestions container
 }
 
 // === MAP & RADAR ===
@@ -331,7 +395,8 @@ async function fetchMetraAIBriefing() {
 language.addEventListener("change", fetchMetraAIBriefing);
 
 // === FETCH WEATHER BY CITY ===
-async function fetchWeatherByCity(citySearched) {
+// === FETCH WEATHER BY CITY NAME (FOR ENTER KEY/SAVED LOCATIONS) ===
+async function fetchWeatherByCityName(citySearched) {
     if (!citySearched) return;
 
     try {
@@ -343,29 +408,39 @@ async function fetchWeatherByCity(citySearched) {
 
         if (!geoData.results || geoData.results.length === 0) {
             alert("Location not found.");
+            locationSuggestions.innerHTML = ''; // Clear suggestions
+            locationSuggestions.classList.remove('active');
             return;
         }
 
         const { latitude, longitude, name, country, timezone } = geoData.results[0];
-        window.currentTimezone = timezone;
+        // Use the more direct fetchWeatherByCoordinates once we have lat/lon/name/country/timezone
+        await fetchWeatherByCoordinates(latitude, longitude, name, country, timezone);
+        
+        locationSuggestions.innerHTML = ''; // Clear suggestions
+        locationSuggestions.classList.remove('active');
 
-        const weatherResponse = await fetch(
-            `/api/weather?lat=${latitude}&lon=${longitude}&city=${encodeURIComponent(
-                name
-            )}`
-        );
-        if (!weatherResponse.ok) throw new Error("Weather failed");
-        const weatherData = await weatherResponse.json();
-
-        updateWeatherDisplay(weatherData, `${name}, ${country}`, timezone);
-        renderMapAndRadar(latitude, longitude);
-        fetchMetraAIBriefing();
     } catch (error) {
-        console.error("Error:", error);
+        console.error("Error fetching weather by city name:", error);
+        alert("Couldn't load weather for your search. Please try again.");
+        locationSuggestions.innerHTML = '';
+        locationSuggestions.classList.remove('active');
     }
 }
 
 // === SEARCH ===
+const debouncedFetchSuggestions = debounce(fetchLocationSuggestions, 300);
+
+locationInput.addEventListener("input", (event) => {
+    const query = event.target.value.trim();
+    if (query.length > 0) {
+        debouncedFetchSuggestions(query);
+    } else {
+        locationSuggestions.innerHTML = '';
+        locationSuggestions.classList.remove('active');
+    }
+});
+
 locationInput.addEventListener("keypress", async (event) => {
     if (event.key === "Enter") {
         const citySearched = locationInput.value.trim();
@@ -375,7 +450,15 @@ locationInput.addEventListener("keypress", async (event) => {
         document.getElementById("TempF").innerText = "-";
         document.getElementById("TempC").innerText = "-";
 
-        await fetchWeatherByCity(citySearched);
+        await fetchWeatherByCityName(citySearched); // Use the new function
+    }
+});
+
+// Clear suggestions when clicking outside the search bar or suggestion list
+document.addEventListener('click', (event) => {
+    if (!locationInput.contains(event.target) && !locationSuggestions.contains(event.target)) {
+        locationSuggestions.innerHTML = '';
+        locationSuggestions.classList.remove('active');
     }
 });
 
@@ -421,7 +504,7 @@ function displaySavedLocations() {
             if (saved_WindSpeed) saved_WindSpeed.innerText = cityObj.windSpeed;
 
             locationInput.value = cityObj.name;
-            fetchWeatherByCity(cityObj.name);
+            fetchWeatherByCityName(cityObj.name); // Use the new function
         });
         savedLocationsList.appendChild(li);
     });

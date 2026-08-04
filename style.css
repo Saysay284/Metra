@@ -525,6 +525,7 @@ html[data-theme="light"] #themeToggle {
     max-width: 600px;
     margin: 0 auto;
     width: 100%;
+    position: relative; /* To position suggestions relative to this section */
 }
 
 #searchBar {
@@ -563,6 +564,63 @@ html[data-theme="light"] #searchBar {
 #locationInput::placeholder {
     color: var(--text-secondary);
     opacity: 0.7;
+}
+
+/* ===== LOCATION SUGGESTIONS ===== */
+.location-suggestions {
+    position: absolute;
+    top: 100%; /* Position below the search bar */
+    left: 0;
+    right: 0;
+    z-index: 999;
+    background: var(--surface-dark);
+    border: 1.5px solid var(--border-color);
+    border-top: none;
+    border-radius: 0 0 14px 14px;
+    box-shadow: var(--shadow-sm);
+    max-height: 250px;
+    overflow-y: auto;
+    list-style: none;
+    padding: 0;
+    margin-top: -1px; /* Overlap border */
+    display: none; /* Hidden by default */
+}
+
+.location-suggestions.active {
+    display: block; /* Show when active */
+}
+
+html[data-theme="light"] .location-suggestions {
+    background: #ffffff;
+    border: 1.5px solid rgba(30, 136, 229, 0.15);
+    box-shadow: 0 2px 12px rgba(30, 136, 229, 0.06);
+}
+
+.suggestion-item {
+    padding: 12px 16px;
+    cursor: pointer;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    transition: background 0.2s ease, color 0.2s ease;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.suggestion-item:last-child {
+    border-bottom: none;
+    border-radius: 0 0 13px 13px; /* Apply to last item for rounded bottom */
+}
+
+.suggestion-item:hover {
+    background: var(--hover-bg);
+    color: var(--accent-primary);
+}
+
+html[data-theme="light"] .suggestion-item {
+    border-bottom: 1px solid rgba(30, 136, 229, 0.08);
+}
+
+html[data-theme="light"] .suggestion-item:hover {
+    background: rgba(30, 136, 229, 0.04);
 }
 
 .location-btn {
