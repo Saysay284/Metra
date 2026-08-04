@@ -80,139 +80,63 @@ app.get('/api/geocode', async (req, res) => {
 });
 
 // ── Weather via wttr.in (primary) + met.no (fallback) ───────────────────────
+// ── Weather via Open-Meteo (primary) ───────────────────────────────────────
 app.get('/api/weather', async (req, res) => {
-    const { lat, lon, city } = req.query;
-    if (!city && (!lat || !lon)) return res.status(400).json({ error: 'Missing params' });
+    const { lat, lon } = req.query; // 'city' is no longer needed for direct weather lookup
 
-    // ── Try wttr.in first ────────────────────────────────────────────────────
-    try {
-        const wttrTarget = city || `${lat},${lon}`;
-        const url = `https://wttr.in/${encodeURIComponent(wttrTarget)}?format=j1`;
-        console.log('Trying wttr.in:', url);
-
-        const response = await fetch(url, { signal: AbortSignal.timeout(6000) });
-        if (!response.ok) throw new Error(`wttr.in HTTP ${response.status}`);
-        const data = await response.json();
-
-        const current = data.current_condition[0];
-
-        // Map wttr.in weather code to Open-Meteo-style code your frontend uses
-        const wttrCode = parseInt(current.weatherCode);
-        const weatherCode = mapWttrCode(wttrCode);
-
-        // Build daily arrays from wttr.in's 3-day weather array
-        const daily = data.weather; // array of 3 days
-
-        const normalized = {
-            current: {
-                temperature_2m: parseFloat(current.temp_F),
-                relative_humidity_2m: parseInt(current.humidity),
-                weather_code: weatherCode,
-                wind_speed_10m: parseFloat(current.windspeedMiles),
-                surface_pressure: parseFloat(current.pressure),
-                visibility: parseFloat(current.visibility) * 1609
-            },
-            timezone: data.nearest_area?.[0]?.country?.[0]?.value || 'UTC',
-            hourly: buildHourly(daily),
-            daily: {
-                weather_code: daily.map(d => mapWttrCode(parseInt(d.hourly[4]?.weatherCode || 0))),
-                temperature_2m_max: daily.map(d => parseFloat(d.maxtempF)),
-                relative_humidity_2m_max: daily.map(d =>
-                    Math.max(...d.hourly.map(h => parseInt(h.humidity)))
-                ),
-                uv_index_max: daily.map(d => parseFloat(d.uvIndex)),
-                sunrise: daily.map(d => d.astronomy[0].sunrise),
-                sunset: daily.map(d => d.astronomy[0].sunset)
-            }
-        };
-
-        return res.json(normalized);
-
-    } catch (err) {
-        console.warn('wttr.in failed:', err.message);
+    if (!lat || !lon) {
+        return res.status(400).json({ error: 'Missing latitude or longitude for weather data.' });
     }
 
-    // ── Fallback: met.no ─────────────────────────────────────────────────────
     try {
-        if (!lat || !lon) return res.status(500).json({ error: 'wttr.in failed and no lat/lon for fallback' });
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+            `&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,surface_pressure` +
+            `&hourly=temperature_2m,relative_humidity_2m,weather_code` +
+            `&daily=weather_code,temperature_2m_max,relative_humidity_2m_max,uv_index_max,sunrise,sunset` +
+            `&temperature_unit=fahrenheit&wind_speed_unit=mph&forecast_days=3&timezone=auto`;
 
-        const url = `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`;
-        console.log('Trying met.no:', url);
+        console.log('Fetching weather from Open-Meteo:', url);
 
-        const response = await fetch(url, {
-            signal: AbortSignal.timeout(6000),
-            headers: { 'User-Agent': 'MetraWeatherApp/1.0 student-project' } // met.no requires this
-        });
-        if (!response.ok) throw new Error(`met.no HTTP ${response.status}`);
+        const response = await fetch(url, { signal: AbortSignal.timeout(6000) });
+        if (!response.ok) {
+            throw new Error(`Open-Meteo HTTP ${response.status}: ${response.statusText}`);
+        }
         const data = await response.json();
 
-        const timeseries = data.properties.timeseries;
-        const current = timeseries[0].data.instant.details;
-        const tempC = current.air_temperature;
-        const tempF = (tempC * 9 / 5) + 32;
-
-        // Build minimal normalized shape from met.no
+        // Normalize Open-Meteo response to match the expected frontend structure
         const normalized = {
             current: {
-                temperature_2m: Math.round(tempF),
-                relative_humidity_2m: Math.round(current.relative_humidity),
-                weather_code: 0,
-                wind_speed_10m: Math.round(current.wind_speed * 0.621),
-                surface_pressure: Math.round(current.air_pressure_at_sea_level),
-                visibility: 16090
+                temperature_2m: Math.round(data.current.temperature_2m),
+                relative_humidity_2m: Math.round(data.current.relative_humidity_2m),
+                weather_code: data.current.weather_code, // WMO code
+                wind_speed_10m: Math.round(data.current.wind_speed_10m),
+                surface_pressure: Math.round(data.current.surface_pressure),
+                visibility: 16090 // Open-Meteo doesn't provide visibility easily, default to a common value
             },
+            timezone: data.timezone,
             hourly: {
-                temperature_2m: timeseries.slice(0, 24).map(t => {
-                    const c = t.data.instant.details.air_temperature;
-                    return Math.round((c * 9 / 5) + 32);
-                }),
-                relative_humidity_2m: timeseries.slice(0, 24).map(t =>
-                    Math.round(t.data.instant.details.relative_humidity)
-                ),
-                weather_code: new Array(24).fill(0)
+                temperature_2m: data.hourly.temperature_2m.slice(0, 24).map(Math.round),
+                relative_humidity_2m: data.hourly.relative_humidity_2m.slice(0, 24).map(Math.round),
+                weather_code: data.hourly.weather_code.slice(0, 24) // WMO codes
             },
             daily: {
-                weather_code: [0, 0, 0],
-                temperature_2m_max: [Math.round(tempF), Math.round(tempF), Math.round(tempF)],
-                relative_humidity_2m_max: [Math.round(current.relative_humidity)],
-                uv_index_max: [0],
-                sunrise: ['06:00', '06:00', '06:00'],
-                sunset: ['18:00', '18:00', '18:00']
+                weather_code: data.daily.weather_code, // WMO codes for 3 days
+                temperature_2m_max: data.daily.temperature_2m_max.map(Math.round),
+                relative_humidity_2m_max: data.daily.relative_humidity_2m_max.map(h => Math.round(h || 0)),
+                uv_index_max: data.daily.uv_index_max.map(uv => Math.round(uv || 0)),
+                sunrise: data.daily.sunrise.map(s => s.split('T')[1].substring(0, 5)), // Extract HH:MM
+                sunset: data.daily.sunset.map(s => s.split('T')[1].substring(0, 5))   // Extract HH:MM
             }
         };
 
         return res.json(normalized);
 
     } catch (err) {
-        console.error('met.no failed:', err.message);
-        return res.status(500).json({ error: 'All weather sources failed.' });
+        console.error('Open-Meteo weather API failed:', err.message);
+        return res.status(500).json({ error: `Failed to retrieve weather data: ${err.message}` });
     }
 });
 
-// ── wttr.in weather code → your interpretWeatherCode ranges ─────────────────
-function mapWttrCode(code) {
-    if (code === 113) return 0;                          // Sunny → Clear Sky
-    if ([116, 119, 122].includes(code)) return 2;       // Cloudy → Partly Cloudy
-    if ([143, 248, 260].includes(code)) return 45;      // Fog
-    if ([263, 266, 281, 284, 293, 296].includes(code)) return 51; // Drizzle
-    if ([299, 302, 305, 308, 353, 356].includes(code)) return 61; // Rain
-    if ([179, 182, 185, 227, 230, 323, 326, 329, 332, 335, 338, 350, 371, 374, 377].includes(code)) return 71; // Snow
-    if ([389, 392, 395].includes(code)) return 95;      // Thunderstorm
-    return 2;
-}
-
-// ── Build hourly arrays from wttr.in's 3-day × 8-slot structure ─────────────
-function buildHourly(daily) {
-    const temps = [], humidity = [], codes = [];
-    for (const day of daily) {
-        for (const hour of day.hourly) {
-            temps.push(parseFloat(hour.tempF));
-            humidity.push(parseInt(hour.humidity));
-            codes.push(mapWttrCode(parseInt(hour.weatherCode)));
-        }
-    }
-    return { temperature_2m: temps, relative_humidity_2m: humidity, weather_code: codes };
-}
 app.listen(port, () => {
     console.log(`Server running on http://localhost:${port}`);
 });
