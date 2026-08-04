@@ -38,6 +38,11 @@ const saved_Humidity = document.getElementById("savedHumidity");
 const saved_WindSpeed = document.getElementById("savedWindSpeed");
 
 const locationInput = document.getElementById("locationInput");
+const autocompleteList = document.getElementById("autocompleteList");
+const searchBar = document.getElementById("searchBar");
+const API_BASE_URL = window.location.origin && window.location.origin !== 'null' ? window.location.origin : 'http://localhost:3000';
+let suggestionAbortController = null;
+let suggestionDebounceTimeout = null;
 
 // === SHOW/HIDE APP ===
 function showMainApp() {
@@ -47,6 +52,68 @@ function showMainApp() {
         mainApp.style.display = "block";
         mainApp.classList.add("visible");
     }, 600);
+}
+
+function clearLocationSuggestions() {
+    if (!autocompleteList) return;
+    autocompleteList.innerHTML = "";
+    autocompleteList.classList.remove("visible");
+}
+
+function buildSuggestionLabel(result) {
+    const placeParts = [result.name, result.admin1, result.country].filter(Boolean);
+    return placeParts.join(", ");
+}
+
+function renderLocationSuggestions(results) {
+    if (!autocompleteList || !results || results.length === 0) {
+        clearLocationSuggestions();
+        return;
+    }
+
+    autocompleteList.innerHTML = "";
+    results.slice(0, 5).forEach((result) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "autocomplete-option";
+        button.setAttribute("role", "option");
+        button.textContent = buildSuggestionLabel(result);
+        button.addEventListener("click", async () => {
+            locationInput.value = button.textContent;
+            clearLocationSuggestions();
+            await fetchWeatherByCity(button.textContent);
+        });
+        autocompleteList.appendChild(button);
+    });
+    autocompleteList.classList.add("visible");
+}
+
+async function fetchLocationSuggestions(query) {
+    if (!query || query.trim().length < 2) {
+        clearLocationSuggestions();
+        return;
+    }
+
+    suggestionDebounceTimeout && clearTimeout(suggestionDebounceTimeout);
+    suggestionDebounceTimeout = setTimeout(async () => {
+        suggestionAbortController?.abort();
+        suggestionAbortController = new AbortController();
+
+        try {
+            const response = await fetch(
+                `${API_BASE_URL}/api/geocode?name=${encodeURIComponent(query)}&count=5`,
+                { signal: suggestionAbortController.signal }
+            );
+            if (!response.ok) throw new Error("Autocomplete request failed");
+
+            const data = await response.json();
+            renderLocationSuggestions(data.results || []);
+        } catch (error) {
+            if (error.name === "AbortError") return;
+            console.error("Autocomplete fetch error:", error);
+            clearLocationSuggestions();
+        }
+    }, 200);
 }
 
 // === GEOLOCATION ===
@@ -96,7 +163,7 @@ function getDeviceLocation() {
 async function fetchWeatherByCoordinates(latitude, longitude) {
     try {
         const geoResponse = await fetch(
-            `http://localhost:3000/api/reverse-geocode?lat=${latitude}&lon=${longitude}`
+            `${API_BASE_URL}/api/reverse-geocode?lat=${latitude}&lon=${longitude}`
         );
         if (!geoResponse.ok) throw new Error("Reverse geocode failed");
         const geoData = await geoResponse.json();
@@ -107,7 +174,7 @@ async function fetchWeatherByCoordinates(latitude, longitude) {
         window.currentCoords = { latitude, longitude };
 
         const weatherResponse = await fetch(
-            `http://localhost:3000/api/weather?lat=${latitude}&lon=${longitude}&city=${encodeURIComponent(
+            `${API_BASE_URL}/api/weather?lat=${latitude}&lon=${longitude}&city=${encodeURIComponent(
                 cityName
             )}`
         );
@@ -307,7 +374,7 @@ async function fetchMetraAIBriefing() {
     aiSummaryElement.innerText = "🤖 Consulting AI...";
 
     try {
-        const response = await fetch("http://localhost:3000/api/ai-briefing", {
+        const response = await fetch(`${API_BASE_URL}/api/ai-briefing`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -336,7 +403,7 @@ async function fetchWeatherByCity(citySearched) {
 
     try {
         const geoResponse = await fetch(
-            `/api/geocode?name=${encodeURIComponent(citySearched)}`
+            `${API_BASE_URL}/api/geocode?name=${encodeURIComponent(citySearched)}&count=5`
         );
         if (!geoResponse.ok) throw new Error("Geocode failed");
         const geoData = await geoResponse.json();
@@ -350,7 +417,7 @@ async function fetchWeatherByCity(citySearched) {
         window.currentTimezone = timezone;
 
         const weatherResponse = await fetch(
-            `/api/weather?lat=${latitude}&lon=${longitude}&city=${encodeURIComponent(
+            `${API_BASE_URL}/api/weather?lat=${latitude}&lon=${longitude}&city=${encodeURIComponent(
                 name
             )}`
         );
@@ -366,8 +433,20 @@ async function fetchWeatherByCity(citySearched) {
 }
 
 // === SEARCH ===
+locationInput.addEventListener("input", async () => {
+    const query = locationInput.value.trim();
+    if (!query) {
+        clearLocationSuggestions();
+        return;
+    }
+    await fetchLocationSuggestions(query);
+});
+
 locationInput.addEventListener("keypress", async (event) => {
     if (event.key === "Enter") {
+        event.preventDefault();
+        clearLocationSuggestions();
+
         const citySearched = locationInput.value.trim();
         if (!citySearched) return;
 
@@ -376,6 +455,14 @@ locationInput.addEventListener("keypress", async (event) => {
         document.getElementById("TempC").innerText = "-";
 
         await fetchWeatherByCity(citySearched);
+    }
+});
+
+document.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!searchBar || !target) return;
+    if (!searchBar.contains(target)) {
+        clearLocationSuggestions();
     }
 });
 
