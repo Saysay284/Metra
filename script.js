@@ -38,6 +38,57 @@ const saved_Humidity = document.getElementById("savedHumidity");
 const saved_WindSpeed = document.getElementById("savedWindSpeed");
 
 const locationInput = document.getElementById("locationInput");
+const suggestionsList = document.getElementById("locationSuggestions");
+let suggestionTimeout = null;
+
+function clearLocationSuggestions() {
+    if (!suggestionsList) return;
+    suggestionsList.innerHTML = "";
+    suggestionsList.classList.add("hidden");
+}
+
+function renderLocationSuggestions(items) {
+    if (!suggestionsList) return;
+    suggestionsList.innerHTML = "";
+
+    if (!items || items.length === 0) {
+        clearLocationSuggestions();
+        return;
+    }
+
+    items.slice(0, 5).forEach((item) => {
+        const listItem = document.createElement("li");
+        const title = item.name || item.title || "Unknown location";
+        const subtitle = item.country ? `, ${item.country}` : "";
+        listItem.textContent = `${title}${subtitle}`;
+        listItem.className = "suggestion-item";
+        listItem.addEventListener("click", () => {
+            locationInput.value = `${title}${subtitle}`;
+            clearLocationSuggestions();
+            fetchWeatherByCity(locationInput.value.trim());
+        });
+        suggestionsList.appendChild(listItem);
+    });
+
+    suggestionsList.classList.remove("hidden");
+}
+
+async function fetchLocationSuggestions(query) {
+    if (!query) {
+        clearLocationSuggestions();
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/geocode?name=${encodeURIComponent(query)}&count=5`);
+        if (!response.ok) throw new Error("Failed to fetch location suggestions");
+        const data = await response.json();
+        renderLocationSuggestions(data.results || []);
+    } catch (error) {
+        console.error("Location suggestions error:", error);
+        clearLocationSuggestions();
+    }
+}
 
 // === SHOW/HIDE APP ===
 function showMainApp() {
@@ -96,18 +147,18 @@ function getDeviceLocation() {
 async function fetchWeatherByCoordinates(latitude, longitude) {
     try {
         const geoResponse = await fetch(
-            `http://localhost:3000/api/reverse-geocode?lat=${latitude}&lon=${longitude}`
+            `/api/reverse-geocode?lat=${latitude}&lon=${longitude}`
         );
         if (!geoResponse.ok) throw new Error("Reverse geocode failed");
         const geoData = await geoResponse.json();
 
-        const cityName = geoData.city || "Your Location";
+        const cityName = geoData.name ? `${geoData.name}, ${geoData.country}` : "Your Location";
         const timezone = geoData.timezone || "UTC";
         window.currentTimezone = timezone;
         window.currentCoords = { latitude, longitude };
 
         const weatherResponse = await fetch(
-            `http://localhost:3000/api/weather?lat=${latitude}&lon=${longitude}&city=${encodeURIComponent(
+            `/api/weather?lat=${latitude}&lon=${longitude}&city=${encodeURIComponent(
                 cityName
             )}`
         );
@@ -116,7 +167,6 @@ async function fetchWeatherByCoordinates(latitude, longitude) {
         const weatherData = await weatherResponse.json();
         updateWeatherDisplay(weatherData, cityName, timezone);
         renderMapAndRadar(latitude, longitude);
-        fetchMetraAIBriefing();
     } catch (error) {
         console.error("Error fetching weather by coordinates:", error);
         alert("Couldn't load weather for your location. Please try searching manually.");
@@ -307,7 +357,7 @@ async function fetchMetraAIBriefing() {
     aiSummaryElement.innerText = "🤖 Consulting AI...";
 
     try {
-        const response = await fetch("http://localhost:3000/api/ai-briefing", {
+        const response = await fetch("/api/ai-briefing", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -336,7 +386,7 @@ async function fetchWeatherByCity(citySearched) {
 
     try {
         const geoResponse = await fetch(
-            `/api/geocode?name=${encodeURIComponent(citySearched)}`
+            `/api/geocode?name=${encodeURIComponent(citySearched)}&count=1`
         );
         if (!geoResponse.ok) throw new Error("Geocode failed");
         const geoData = await geoResponse.json();
@@ -359,15 +409,32 @@ async function fetchWeatherByCity(citySearched) {
 
         updateWeatherDisplay(weatherData, `${name}, ${country}`, timezone);
         renderMapAndRadar(latitude, longitude);
-        fetchMetraAIBriefing();
     } catch (error) {
         console.error("Error:", error);
     }
 }
 
 // === SEARCH ===
-locationInput.addEventListener("keypress", async (event) => {
+locationInput.addEventListener("input", () => {
+    const query = locationInput.value.trim();
+    if (!query) {
+        clearLocationSuggestions();
+        return;
+    }
+
+    if (suggestionTimeout) {
+        clearTimeout(suggestionTimeout);
+    }
+
+    suggestionTimeout = setTimeout(() => {
+        fetchLocationSuggestions(query);
+    }, 250);
+});
+
+locationInput.addEventListener("keydown", async (event) => {
     if (event.key === "Enter") {
+        event.preventDefault();
+        clearLocationSuggestions();
         const citySearched = locationInput.value.trim();
         if (!citySearched) return;
 
@@ -376,6 +443,18 @@ locationInput.addEventListener("keypress", async (event) => {
         document.getElementById("TempC").innerText = "-";
 
         await fetchWeatherByCity(citySearched);
+    } else if (event.key === "Escape") {
+        clearLocationSuggestions();
+    }
+});
+
+document.addEventListener("click", (event) => {
+    if (
+        suggestionsList &&
+        event.target !== locationInput &&
+        !suggestionsList.contains(event.target)
+    ) {
+        clearLocationSuggestions();
     }
 });
 

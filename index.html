@@ -84,7 +84,7 @@
 
             <div class="search-section">
                 <div id="searchBar">
-                    <input type="text" placeholder="Search for a city..." id="locationInput">
+                    <input type="text" placeholder="Search for a city..." id="locationInput" autocomplete="off">
                     <button id="useLocationBtn" title="Use current location" class="location-btn">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                             stroke-linecap="round" stroke-linejoin="round">
@@ -93,6 +93,7 @@
                         </svg>
                     </button>
                 </div>
+                <ul id="locationSuggestions" class="suggestions hidden"></ul>
             </div>
 
             <div id="currentLocStats" class="stats-card">

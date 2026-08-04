@@ -1,20 +1,30 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const staticRoot = path.join(__dirname, '/');
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.static(staticRoot));
 
-// Initialize Gemini client
-const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// Initialize Gemini client only when API key is available
+const geminiApiKey = process.env.GEMINI_API_KEY;
+const ai = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
 
 // ── AI Briefing ──────────────────────────────────────────────────────────────
 app.post('/api/ai-briefing', async (req, res) => {
+    if (!ai) {
+        return res.status(500).json({ error: 'Server configuration missing Gemini API key.' });
+    }
+
     try {
         const { city, tempC, tempF, condition, humidity, language, timezone } = req.body;
         const model = ai.getGenerativeModel({ model: 'gemini-2.5-flash' });
@@ -66,14 +76,42 @@ app.post('/api/ai-briefing', async (req, res) => {
 });
 // ── Geocoding Proxy (this one still works fine) ──────────────────────────────
 app.get('/api/geocode', async (req, res) => {
-    const { name } = req.query;
+    const { name, count } = req.query;
     if (!name) return res.status(400).json({ error: 'Missing name' });
 
+    const maxResults = Math.min(Math.max(parseInt(count, 10) || 1, 1), 10);
     try {
-        const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=en&format=json`;
+        const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=${maxResults}&language=en&format=json`;
         const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
         const data = await response.json();
         res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/reverse-geocode', async (req, res) => {
+    const { lat, lon } = req.query;
+    if (!lat || !lon) return res.status(400).json({ error: 'Missing latitude or longitude' });
+
+    try {
+        const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`;
+        const response = await fetch(url, {
+            signal: AbortSignal.timeout(5000),
+            headers: { 'User-Agent': 'MetraWeatherApp/1.0 (student-project)' }
+        });
+        if (!response.ok) throw new Error(`Reverse geocode HTTP ${response.status}`);
+        const data = await response.json();
+
+        if (!data || !data.address) {
+            return res.status(404).json({ error: 'Location not found' });
+        }
+
+        res.json({
+            name: data.name || data.display_name || 'Current location',
+            country: data.address.country || '',
+            timezone: data.timezone?.name || 'UTC'
+        });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
