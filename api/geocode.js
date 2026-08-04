@@ -1,14 +1,16 @@
 export default async function handler(req, res) {
-  const { name } = req.query;
+  const { name, count } = req.query;
 
   if (!name) {
     return res.status(400).json({ error: "Missing 'name' query parameter" });
   }
 
+  const maxResults = Math.min(Math.max(parseInt(count, 10) || 1, 1), 10);
+
   try {
     const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
       name
-    )}&count=1&language=en&format=json`;
+    )}&count=${maxResults}&language=en&format=json`;
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);

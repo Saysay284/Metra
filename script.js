@@ -47,6 +47,23 @@ function clearLocationSuggestions() {
     suggestionsList.classList.add("hidden");
 }
 
+async function fetchWeatherForCoordinates({ latitude, longitude, displayName, timezone = "UTC" }) {
+    if (!latitude || !longitude) return;
+
+    try {
+        const weatherResponse = await fetch(
+            `/api/weather?lat=${latitude}&lon=${longitude}&city=${encodeURIComponent(displayName)}`
+        );
+        if (!weatherResponse.ok) throw new Error("Weather failed");
+        const weatherData = await weatherResponse.json();
+        updateWeatherDisplay(weatherData, displayName, timezone);
+        renderMapAndRadar(latitude, longitude);
+    } catch (error) {
+        console.error("Error fetching weather for selected location:", error);
+        alert("Unable to retrieve weather for that location. Please try another search.");
+    }
+}
+
 function renderLocationSuggestions(items) {
     if (!suggestionsList) return;
     suggestionsList.innerHTML = "";
@@ -62,10 +79,19 @@ function renderLocationSuggestions(items) {
         const subtitle = item.country ? `, ${item.country}` : "";
         listItem.textContent = `${title}${subtitle}`;
         listItem.className = "suggestion-item";
+        listItem.dataset.latitude = item.latitude;
+        listItem.dataset.longitude = item.longitude;
+        listItem.dataset.displayName = `${title}${subtitle}`;
+        listItem.dataset.timezone = item.timezone || "UTC";
         listItem.addEventListener("click", () => {
             locationInput.value = `${title}${subtitle}`;
             clearLocationSuggestions();
-            fetchWeatherByCity(locationInput.value.trim());
+            fetchWeatherForCoordinates({
+                latitude: item.latitude,
+                longitude: item.longitude,
+                displayName: `${title}${subtitle}`,
+                timezone: item.timezone || "UTC"
+            });
         });
         suggestionsList.appendChild(listItem);
     });
@@ -397,20 +423,18 @@ async function fetchWeatherByCity(citySearched) {
         }
 
         const { latitude, longitude, name, country, timezone } = geoData.results[0];
+        const displayName = country ? `${name}, ${country}` : name;
         window.currentTimezone = timezone;
 
-        const weatherResponse = await fetch(
-            `/api/weather?lat=${latitude}&lon=${longitude}&city=${encodeURIComponent(
-                name
-            )}`
-        );
-        if (!weatherResponse.ok) throw new Error("Weather failed");
-        const weatherData = await weatherResponse.json();
-
-        updateWeatherDisplay(weatherData, `${name}, ${country}`, timezone);
-        renderMapAndRadar(latitude, longitude);
+        await fetchWeatherForCoordinates({
+            latitude,
+            longitude,
+            displayName,
+            timezone: timezone || "UTC"
+        });
     } catch (error) {
         console.error("Error:", error);
+        alert("Unable to find that location. Please try another search.");
     }
 }
 
@@ -445,6 +469,12 @@ locationInput.addEventListener("keydown", async (event) => {
         await fetchWeatherByCity(citySearched);
     } else if (event.key === "Escape") {
         clearLocationSuggestions();
+    }
+});
+
+locationInput.addEventListener("focus", () => {
+    if (suggestionsList && suggestionsList.children.length > 0) {
+        suggestionsList.classList.remove("hidden");
     }
 });
 

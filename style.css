@@ -525,6 +525,7 @@ html[data-theme="light"] #themeToggle {
     max-width: 600px;
     margin: 0 auto;
     width: 100%;
+    position: relative;
 }
 
 #searchBar {
@@ -576,6 +577,10 @@ html[data-theme="light"] #searchBar {
     box-shadow: 0 16px 36px rgba(0, 0, 0, 0.12);
     overflow: hidden;
     transition: opacity 0.2s ease, transform 0.2s ease;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    z-index: 20;
 }
 
 .suggestions.hidden {
