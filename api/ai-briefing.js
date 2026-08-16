@@ -79,7 +79,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ summary: response.text });
   } catch (error) {
-    console.error('❌ Vercel Function Execution Error:', error);
+    console.error(' Vercel Function Execution Error:', error);
     // Generic error message to prevent leaking stack traces
     return res.status(500).json({ error: 'Failed to generate weather briefing.' });
   }

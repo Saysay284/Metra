@@ -112,7 +112,7 @@ app.post('/api/ai-briefing', aiLimiter, async (req, res) => {
       contents: prompt,
     });
 
-    console.log('✅ Briefing generated successfully');
+    console.log(' Briefing generated successfully');
     res.json({ summary: response.text });
   } catch (error) {
     console.error('❌ Error generating AI briefing:', error);
