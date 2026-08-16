@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 
 const app = express();
 const port = 3000;
@@ -10,27 +10,18 @@ const port = 3000;
 app.use(cors());
 app.use(express.json());
 
-// Initialize Gemini client
-const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// Initialize GoogleGenAI client (automatically reads process.env.GEMINI_API_KEY)
+const ai = new GoogleGenAI();
 
 // ── AI Briefing ──────────────────────────────────────────────────────────────
 app.post('/api/ai-briefing', async (req, res) => {
-    console.log('Received payload:', req.body); // Log incoming body
-
     try {
         const { city, tempC, tempF, condition, humidity, language, timezone } = req.body;
 
-        const apiKey = process.env.GEMINI_API_KEY;
-        if (!apiKey) {
-            console.error('❌ ERROR: GEMINI_API_KEY is not defined in process.env');
-            return res.status(500).json({ error: 'Server configuration error: GEMINI_API_KEY missing.' });
+        if (!process.env.GEMINI_API_KEY) {
+            console.error('❌ GEMINI_API_KEY missing from environment.');
+            return res.status(500).json({ error: 'GEMINI_API_KEY is not configured on the server.' });
         }
-
-        // Initialize inside handler
-        const ai = new GoogleGenerativeAI(apiKey);
-        
-        // Use gemini-1.5-flash for universal API key compatibility
-        const model = ai.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
         const localHour = parseInt(new Date().toLocaleString('en-US', {
             hour: 'numeric', hour12: false, timeZone: timezone || 'UTC'
@@ -57,27 +48,21 @@ app.post('/api/ai-briefing', async (req, res) => {
             Language Requirement: Respond completely in this language: ${language || 'English'}.
         `;
 
-        let result;
-        for (let attempt = 1; attempt <= 3; attempt++) {
-            try {
-                result = await model.generateContent(prompt);
-                break;
-            } catch (err) {
-                console.error(`Gemini Attempt ${attempt} Failed:`, err.message);
-                if (attempt === 3) throw err;
-                await new Promise(r => setTimeout(r, 1000 * attempt));
-            }
-        }
+        // New SDK call format
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+        });
 
-        const response = await result.response;
-        const summary = response.text();
-
-        console.log('✅ AI Summary Generated Successfully');
+        // The text property is directly accessible on the response object
+        const summary = response.text;
+        
+        console.log('✅ Briefing generated successfully');
         res.json({ summary });
 
     } catch (error) {
-        console.error('❌ Detailed AI Briefing Error:', error);
-        res.status(500).json({ error: error.message || 'Internal Server Error' });
+        console.error('❌ Error generating AI briefing:', error);
+        res.status(500).json({ error: error.message || 'Failed to generate briefing.' });
     }
 });
 // ── Geocoding Proxy (this one still works fine) ──────────────────────────────
