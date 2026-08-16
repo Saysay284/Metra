@@ -1,8 +1,9 @@
 import { GoogleGenAI } from '@google/genai';
 
 export default async function handler(req, res) {
-  // CORS setup
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // 1. CORS Setup - Restrict origin in production
+  const allowedOrigin = process.env.ALLOWED_ORIGIN || '*'; // Set ALLOWED_ORIGIN in Vercel env (e.g., https://your-app.vercel.app)
+  res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
@@ -18,20 +19,33 @@ export default async function handler(req, res) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       console.error('❌ Missing GEMINI_API_KEY environment variable');
-      return res.status(500).json({ error: 'GEMINI_API_KEY is not configured on Vercel.' });
+      return res.status(500).json({ error: 'Server configuration error.' });
     }
 
+    // 2. Validate & Sanitize Incoming Payload
     const { city, tempC, tempF, condition, humidity, language, timezone } = req.body || {};
+
+    const cleanCity = typeof city === 'string' ? city.trim().slice(0, 100) : 'Unknown Location';
+    const cleanCondition = typeof condition === 'string' ? condition.trim().slice(0, 50) : 'Clear';
+    const cleanLanguage = typeof language === 'string' ? language.trim().slice(0, 30) : 'English';
+    const cleanTimezone = typeof timezone === 'string' ? timezone.trim() : 'UTC';
+
     const ai = new GoogleGenAI({ apiKey });
 
-    const localHour = parseInt(
-      new Date().toLocaleString('en-US', {
-        hour: 'numeric',
-        hour12: false,
-        timeZone: timezone || 'UTC',
-      }),
-      10
-    );
+    // 3. Timezone Fallback Guard
+    let localHour = 12;
+    try {
+      localHour = parseInt(
+        new Date().toLocaleString('en-US', {
+          hour: 'numeric',
+          hour12: false,
+          timeZone: cleanTimezone,
+        }),
+        10
+      );
+    } catch {
+      localHour = new Date().getUTCHours();
+    }
 
     const timeOfDay =
       localHour >= 5 && localHour < 12
@@ -45,17 +59,17 @@ export default async function handler(req, res) {
     const prompt = `
       Context: The user is looking at a weather app called Metra.
       Current Weather Data:
-      - Location: ${city || 'Unknown Location'}
+      - Location: ${cleanCity}
       - Time of day: ${timeOfDay}
       - Temperature: ${tempC ?? '--'}°C / ${tempF ?? '--'}°F
-      - Condition: ${condition || 'Clear'}
+      - Condition: ${cleanCondition}
       - Humidity: ${humidity ?? '--'}%
 
       Task: Provide a highly engaging, friendly 2-sentence weather summary 
       that is appropriate for the current time of day (${timeOfDay}).
       Include a smart commuting or clothing tip based on this data.
       Do NOT say "good morning/afternoon" — just be natural and time-aware.
-      Language Requirement: Respond completely in this language: ${language || 'English'}.
+      Language Requirement: Respond completely in this language: ${cleanLanguage}.
     `;
 
     const response = await ai.models.generateContent({
@@ -66,6 +80,7 @@ export default async function handler(req, res) {
     return res.status(200).json({ summary: response.text });
   } catch (error) {
     console.error('❌ Vercel Function Execution Error:', error);
-    return res.status(500).json({ error: error.message || 'Internal Server Error' });
+    // Generic error message to prevent leaking stack traces
+    return res.status(500).json({ error: 'Failed to generate weather briefing.' });
   }
 }
