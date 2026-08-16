@@ -17,10 +17,14 @@ const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 app.post('/api/ai-briefing', async (req, res) => {
     try {
         const { city, tempC, tempF, condition, humidity, language, timezone } = req.body;
+
+        if (!process.env.GEMINI_API_KEY) {
+            console.error('Missing GEMINI_API_KEY in process.env');
+            return res.status(500).json({ error: 'GEMINI_API_KEY is not configured on the server.' });
+        }
+
         const model = ai.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-        // Get current hour to give Gemini time-of-day context
-        //const hour = new Date().getHours();
         const localHour = parseInt(new Date().toLocaleString('en-US', {
             hour: 'numeric', hour12: false, timeZone: timezone || 'UTC'
         }));
@@ -36,17 +40,17 @@ app.post('/api/ai-briefing', async (req, res) => {
                 result = await model.generateContent(`
                     Context: The user is looking at a weather app called Metra.
                     Current Weather Data:
-                    - Location: ${city}
+                    - Location: ${city || 'Unknown Location'}
                     - Time of day: ${timeOfDay}
                     - Temperature: ${tempC}°C / ${tempF}°F
-                    - Condition: ${condition}
+                    - Condition: ${condition || 'Clear'}
                     - Humidity: ${humidity}%
 
                     Task: Provide a highly engaging, friendly 2-sentence weather summary 
                     that is appropriate for the current time of day (${timeOfDay}).
                     Include a smart commuting or clothing tip based on this data.
                     Do NOT say "good morning/afternoon" — just be natural and time-aware.
-                    Language Requirement: Respond completely in this language: ${language}.
+                    Language Requirement: Respond completely in this language: ${language || 'English'}.
                 `);
                 break;
             } catch (err) {
@@ -56,12 +60,15 @@ app.post('/api/ai-briefing', async (req, res) => {
             }
         }
 
-        const summary = result.response.text();
+        // Await response object before calling .text()
+        const response = await result.response;
+        const summary = response.text();
+
         res.json({ summary });
 
     } catch (error) {
-        console.error('Error generating AI briefing:', error.message);
-        res.status(500).json({ error: error.message });
+        console.error('Error generating AI briefing:', error);
+        res.status(500).json({ error: error.message || 'Failed to generate summary' });
     }
 });
 // ── Geocoding Proxy (this one still works fine) ──────────────────────────────
